@@ -1,0 +1,9 @@
+streamlit==1.32.0          # Para crear la interfaz web rápidamente
+google-generativeai==0.8.6 # El SDK oficial para la API de Gemini
+python-dotenv==1.0.1       # Para ocultar y manejar tu API Key de forma segura
+pdfplumber==0.11.0         # (Opcional) Si prefieres extraer el texto del PDF antes de enviarlo
+SQLAlchemy==2.0.29         # ORM para interactuar con SQLite/MySQL usando Python puro
+fastapi==0.110.1
+uvicorn==0.29.0
+python-multipart==0.0.9      # Necesario para recibir archivos PDF en la API
+openai==1.14.0
