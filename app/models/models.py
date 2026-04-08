@@ -48,6 +48,6 @@ class AvanceSemanal(Base):
     semana = Column(Integer)
     porcentaje_avance = Column(Float)
     observaciones = Column(String, nullable=True)
-    # Aquí podríamos agregar una columna para la URL de la imagen en el futuro
+    rutas_fotografias = Column(String, nullable=True) # JSON o URL separados por comas
 
     proyecto = relationship("Proyecto", back_populates="avances")
