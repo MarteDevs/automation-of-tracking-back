@@ -63,7 +63,27 @@ def analizar_presupuesto_pdf(ruta_archivo_pdf):
         print(f"Error al procesar el documento con OpenAI: {e}")
         return None
 
-if __name__ == "__main__":
-    ruta_prueba = r"d:\vps-program-proyects\proyecto_control_soldadura\temp\AGUZADO_CHOTANAS_ESPERANZA_CHOTANAS.pdf" 
-    resultado = analizar_presupuesto_pdf(ruta_prueba)
-    print(json.dumps(resultado, indent=4, ensure_ascii=False))
+def generar_resumen_ejecutivo_avance(nombre_proyecto, semana, porcentaje, observaciones):
+    """Genera un párrafo profesional usando IA para incrustar en el PDF."""
+    try:
+        obs_texto = observaciones if observaciones else "Ninguna novedad técnica."
+        prompt = f"""
+        Eres un Ingeniero Residente encargado del control de obra en un proyecto metalmecánico/soldadura.
+        La tarea es redactar un resumen ejecutivo muy formal (breve, un solo párrafo) para el informe en PDF.
+        Datos del Contexto:
+        - Proyecto: {nombre_proyecto}
+        - Semana Evaluada: N° {semana}
+        - Progreso Total Alcanzado: {porcentaje}%
+        - Observaciones y Detalles de la semana: {obs_texto}
+        
+        No agregues saludos ni descriptores, escribe solo el contenido del párrafo formal.
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error AI resumen: {e}")
+        return f"En esta semana {semana}, se alcanzó un avance del {porcentaje}%. Las actividades transcurren sin detención. {obs_texto}"

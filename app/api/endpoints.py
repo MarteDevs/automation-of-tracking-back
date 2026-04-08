@@ -4,10 +4,12 @@ import shutil
 import os
 import uuid
 
-from app.services.openai_service import analizar_presupuesto_pdf
+from app.services.openai_service import analizar_presupuesto_pdf, generar_resumen_ejecutivo_avance
+from app.services.pdf_service import crear_pdf_avance
 from app.models.database import get_db
 from app.models import models
 from app.schemas import project_schema
+from fastapi.responses import FileResponse
 
 router = APIRouter()
 
@@ -125,4 +127,32 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al registrar el avance: {str(e)}")
+
+@router.get("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}/descargar-pdf")
+def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depends(get_db)):
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
+    avance = db.query(models.AvanceSemanal).filter(models.AvanceSemanal.id == avance_id, models.AvanceSemanal.proyecto_id == proyecto_id).first()
+    
+    if not proyecto or not avance:
+        raise HTTPException(status_code=404, detail="Proyecto o Avance no encontrados")
+
+    # Generamos la IA
+    texto_ia = generar_resumen_ejecutivo_avance(
+        proyecto.nombre_proyecto, 
+        avance.semana, 
+        avance.porcentaje_avance, 
+        avance.observaciones
+    )
+    
+    # Dibujamos el PDF
+    pdf_path = crear_pdf_avance(proyecto, avance, texto_ia)
+    
+    nom_seguro = proyecto.nombre_proyecto.replace(" ", "_")[:15]
+    
+    return FileResponse(
+        path=pdf_path, 
+        filename=f"Reporte_S{avance.semana}_{nom_seguro}.pdf",
+        media_type="application/pdf"
+    )
+
 
