@@ -278,4 +278,19 @@ def eliminar_avance_semanal(proyecto_id: int, avance_id: int, db: Session = Depe
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al intentar eliminar el registro: {str(e)}")
 
+@router.delete("/api/v1/proyectos/{proyecto_id}", dependencies=[Depends(get_current_user)])
+def eliminar_proyecto(proyecto_id: int, db: Session = Depends(get_db)):
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
+    
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="El proyecto solicitado no existe.")
+
+    try:
+        db.delete(proyecto)
+        db.commit()
+        return {"mensaje": "Proyecto eliminado satisfactoriamente"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al eliminar el proyecto: {str(e)}")
+
 
