@@ -80,11 +80,12 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     # Resumen de IA
     pdf.set_font('Arial', 'B', 11)
     pdf.cell(0, 8, ' 3. RESUMEN EJECUTIVO', ln=True)
-    pdf.set_font('Arial', 'I', 10)
     
     # Texto de IA
+    pdf.set_fill_color(242, 242, 242) # Gris claro
+    pdf.set_font('Arial', 'I', 10)
     txt_ia_safe = texto_ai.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 6, txt_ia_safe)
+    pdf.multi_cell(0, 6, txt_ia_safe, border=1, fill=True, align='J')
     pdf.ln(10)
     
     # Observaciones Crudas
@@ -223,6 +224,35 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
             pdf.cell(25, 7, f' {mat.unidad}', align='C', border=1)
             pdf.cell(40, 7, f' S/ {mat.total}', align='R', border=1, ln=True)
             
+            
+    # ------------------ PÁGINA 4: ANEXO DE MANO DE OBRA ---------------- #
+    if proyecto.mano_de_obra:
+        pdf.add_page()
+        pdf.set_text_color(0, 51, 102)
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 10, 'ANEXO III: REPORTE CONSOLIDADO DE MANO DE OBRA', ln=True, align='C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(5)
+        
+        # Headers Tabla Mano de Obra
+        pdf.set_font('Arial', 'B', 9)
+        pdf.set_fill_color(220, 230, 241)
+        pdf.cell(95, 8, ' Especialidad / Descripcion', border=1, fill=True)
+        pdf.cell(30, 8, ' Trabajadores', align='C', border=1, fill=True)
+        pdf.cell(25, 8, ' P. Unitario', align='C', border=1, fill=True)
+        pdf.cell(40, 8, ' Costo Total Estimado', align='R', border=1, fill=True, ln=True)
+        
+        pdf.set_font('Arial', '', 9)
+        for ob in proyecto.mano_de_obra:
+            desc_safe = ob.descripcion.encode('latin-1', 'replace').decode('latin-1')
+            if len(desc_safe) > 52:
+                 desc_safe = desc_safe[:49] + "..."
+                 
+            pdf.cell(95, 7, f' {desc_safe}', border=1)
+            pdf.cell(30, 7, f' {ob.cantidad_trabajadores}', align='C', border=1)
+            pdf.cell(25, 7, f' S/ {ob.precio_unitario}', align='C', border=1)
+            pdf.cell(40, 7, f' S/ {ob.total}', align='R', border=1, ln=True)
+
     pdf.ln(25)
     
     # Firmas

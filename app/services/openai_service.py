@@ -69,19 +69,24 @@ def analizar_presupuesto_pdf(ruta_archivo_pdf):
         return None
 
 def generar_resumen_ejecutivo_avance(nombre_proyecto, semana, porcentaje, observaciones):
-    """Genera un párrafo profesional usando IA para incrustar en el PDF."""
+    """Genera un reporte profesional organizado por bloques estructurados usando IA para incrustar en el PDF."""
     try:
-        obs_texto = observaciones if observaciones else "Ninguna novedad técnica."
+        obs_texto = observaciones if observaciones else "Ninguna novedad técnica reportada para este periodo."
         prompt = f"""
         Eres un Ingeniero Residente encargado del control de obra en un proyecto metalmecánico/soldadura.
-        La tarea es redactar un resumen ejecutivo muy formal (breve, un solo párrafo) para el informe en PDF.
+        La tarea es redactar un "RESUMEN EJECUTIVO" muy formal (muy concentrado en un solo párrafo sólido) para el informe en PDF.
+        Resume todas las actividades logradas sin hacer listas, solo fluyendo en prosa profesional y continua.
+
         Datos del Contexto:
         - Proyecto: {nombre_proyecto}
         - Semana Evaluada: N° {semana}
         - Progreso Total Alcanzado: {porcentaje}%
-        - Observaciones y Detalles de la semana: {obs_texto}
+        - Observaciones dictadas: {obs_texto}
         
-        No agregues saludos ni descriptores, escribe solo el contenido del párrafo formal.
+        Reglas:
+        - Cero saludos (ni hola, ni buenos días).
+        - Debe ser un solo párrafo continuo, sin viñetas, sin subtítulos y sin asteriscos.
+        - Tono corporativo, en tercera persona, redactado fluidamente para rellenar un cuadro.
         """
         response = client.chat.completions.create(
             model="gpt-4o-mini",
