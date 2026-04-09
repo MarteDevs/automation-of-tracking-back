@@ -152,6 +152,35 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.multi_cell(0, 5, f"(*) La Curva Logística S (Programada) es calculada asumiendo un avance de forma "
                          f"Normal y Logistica asintotica durante las {proyecto.semanas_estimadas} Semanas pronosticadas de ejecucion general.")
                          
+    # ------------------ PÁGINA 3: ANEXO DE MATERIALES ---------------- #
+    if proyecto.materiales:
+        pdf.add_page()
+        pdf.set_text_color(0, 51, 102)
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 10, 'ANEXO II: REPORTE CONSOLIDADO DE MATERIALES Y EQUIPOS', ln=True, align='C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(5)
+        
+        # Headers Tabla
+        pdf.set_font('Arial', 'B', 9)
+        pdf.set_fill_color(220, 230, 241)
+        pdf.cell(95, 8, ' Descripcion del Insumo / Equipo', border=1, fill=True)
+        pdf.cell(30, 8, ' Cantidad', align='C', border=1, fill=True)
+        pdf.cell(25, 8, ' Unidad', align='C', border=1, fill=True)
+        pdf.cell(40, 8, ' Costo Total Previsto', align='R', border=1, fill=True, ln=True)
+        
+        pdf.set_font('Arial', '', 9)
+        for mat in proyecto.materiales:
+            desc_safe = mat.descripcion.encode('latin-1', 'replace').decode('latin-1')
+            # Acortar la descripcion si es muy larga para que no desborde la fila (limite ~50 chars para 95 pts)
+            if len(desc_safe) > 52:
+                 desc_safe = desc_safe[:49] + "..."
+                 
+            pdf.cell(95, 7, f' {desc_safe}', border=1)
+            pdf.cell(30, 7, f' {mat.cantidad}', align='C', border=1)
+            pdf.cell(25, 7, f' {mat.unidad}', align='C', border=1)
+            pdf.cell(40, 7, f' S/ {mat.total}', align='R', border=1, ln=True)
+            
     # Guardar en archivo temporal seguro
     fd, temp_path = tempfile.mkstemp(suffix='.pdf')
     os.close(fd)
