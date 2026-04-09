@@ -9,12 +9,37 @@ from app.services.pdf_service import crear_pdf_avance
 from app.models.database import get_db
 from app.models import models
 from app.schemas import project_schema
-from fastapi.responses import FileResponse
 from fastapi import Request
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.responses import FileResponse
 from collections import defaultdict
 import time
+import jwt
+
+# Llave elevada a nivel criptográfico superior (32 bytes) para cumplir con el RFC 7518
+SECRET_KEY = "S0Ld4dur4_S3cur3_M4g1cK3y12345678"
+ALGORITHM = "HS256"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token")
 
 router = APIRouter()
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("sub")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Credenciales invalidadas o sesión expirada")
+
+@router.post("/api/v1/token")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    u = form_data.username.upper()
+    p = form_data.password
+    valid_users = {"JORGE": "POLTAND1", "ADMIN": "ADMIN"}
+    
+    if u in valid_users and valid_users[u] == p:
+        encoded = jwt.encode({"sub": u, "exp": time.time() + 86400}, SECRET_KEY, algorithm=ALGORITHM)
+        return {"access_token": encoded, "token_type": "bearer"}
+    raise HTTPException(status_code=400, detail="Usuario o Contraseña incorrectas")
 
 # Anti-Spam: Memoria Volátil para proteger la billetera de OpenAI (Rate Limiting rudimentario)
 ip_ratios = defaultdict(list)
@@ -31,7 +56,7 @@ def check_rate_limit(request: Request):
     
     ip_ratios[ip].append(now)
 
-@router.put("/api/v1/proyectos/{proyecto_id}/configuracion", response_model=project_schema.ProyectoResponse)
+@router.put("/api/v1/proyectos/{proyecto_id}/configuracion", response_model=project_schema.ProyectoResponse, dependencies=[Depends(get_current_user)])
 def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.ProyectoUpdate, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     if not proyecto:
@@ -42,7 +67,7 @@ def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.P
     db.refresh(proyecto)
     return proyecto
 
-@router.post("/api/v1/procesar-presupuesto/", response_model=project_schema.ProyectoResponse, dependencies=[Depends(check_rate_limit)])
+@router.post("/api/v1/procesar-presupuesto/", response_model=project_schema.ProyectoResponse, dependencies=[Depends(check_rate_limit), Depends(get_current_user)])
 async def procesar_presupuesto(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="El archivo debe ser un PDF")
@@ -122,19 +147,19 @@ async def procesar_presupuesto(request: Request, file: UploadFile = File(...), d
 
 from typing import List
 
-@router.get("/api/v1/proyectos/", response_model=List[project_schema.ProyectoResponse])
+@router.get("/api/v1/proyectos/", response_model=List[project_schema.ProyectoResponse], dependencies=[Depends(get_current_user)])
 def listar_proyectos(db: Session = Depends(get_db)):
     proyectos = db.query(models.Proyecto).all()
     return proyectos
 
-@router.get("/api/v1/proyectos/{proyecto_id}", response_model=project_schema.ProyectoResponse)
+@router.get("/api/v1/proyectos/{proyecto_id}", response_model=project_schema.ProyectoResponse, dependencies=[Depends(get_current_user)])
 def obtener_proyecto(proyecto_id: int, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     if not proyecto:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return proyecto
 
-@router.post("/api/v1/proyectos/{proyecto_id}/avances/", response_model=project_schema.AvanceSemanalResponse)
+@router.post("/api/v1/proyectos/{proyecto_id}/avances/", response_model=project_schema.AvanceSemanalResponse, dependencies=[Depends(get_current_user)])
 def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalCreate, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     if not proyecto:
@@ -157,7 +182,7 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al registrar el avance: {str(e)}")
 
-@router.get("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}/descargar-pdf")
+@router.get("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}/descargar-pdf", dependencies=[Depends(get_current_user)])
 def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     avance = db.query(models.AvanceSemanal).filter(models.AvanceSemanal.id == avance_id, models.AvanceSemanal.proyecto_id == proyecto_id).first()
@@ -184,7 +209,7 @@ def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depend
         media_type="application/pdf"
     )
 
-@router.post("/api/v1/upload-imagen/")
+@router.post("/api/v1/upload-imagen/", dependencies=[Depends(get_current_user)])
 async def upload_imagen(files: List[UploadFile] = File(...)):
     rutas = []
     

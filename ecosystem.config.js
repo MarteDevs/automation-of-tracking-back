@@ -3,19 +3,13 @@ module.exports = {
     {
       name: 'control-soldadura-api',
       
-      // NOTA: Si tu VPS es Linux/Ubuntu, la ruta del entorno virtual es:
-      script: './venv/bin/python',
+      // Llamamos al archivo nativo de Python para evadir problemas de Binarios Node JS (ELF Error)
+      script: 'start.py',
       
-      // Si tu VPS es Windows Server, asegúrate de cambiar la linea anterior a:
-      // script: '.\\venv\\Scripts\\python.exe',
-
-      // Llamamos al paquete de uvicorn via modulo python
-      args: '-m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2',
+      // Asignamos el interprete Oficial de tu Entorno Virtual
+      interpreter: './venv/bin/python',
       
-      // PM2 usará el motor que declaramos en `script` directamente
-      interpreter: 'none',
-      
-      // Auto-reinicio si la aplicación consume más de 500MB de RAM (ideal para la libreria FPDF)
+      // Auto-reinicio por control de limite de RAM en libreria FPDF PDF
       max_memory_restart: '500M',
 
       env: {
