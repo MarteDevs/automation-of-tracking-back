@@ -9,12 +9,14 @@ class ProyectoBase(BaseModel):
     costo_total: float
     utilidad_porcentaje: float
     semanas_estimadas: Optional[int] = 0
+    tipo_duracion: Optional[str] = "SEMANAS"
 
 class ProyectoCreate(ProyectoBase):
     pass
 
 class ProyectoUpdate(BaseModel):
     semanas_estimadas: int
+    tipo_duracion: str
 
 class ManoObraBase(BaseModel):
     descripcion: str
@@ -34,6 +36,8 @@ class AvanceSemanalBase(BaseModel):
     observaciones: Optional[str] = None
     rutas_fotografias: Optional[str] = None
     tipo_periodo: str = "SEMANA"  # SEMANA o DIA
+    fecha_fin: Optional[str] = None
+    dias_trabajados: Optional[float] = 0
 
 class AvanceSemanalCreate(AvanceSemanalBase):
     pass

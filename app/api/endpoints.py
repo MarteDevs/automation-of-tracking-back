@@ -63,6 +63,7 @@ def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.P
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     
     proyecto.semanas_estimadas = config.semanas_estimadas
+    proyecto.tipo_duracion = config.tipo_duracion
     db.commit()
     db.refresh(proyecto)
     return proyecto
@@ -178,7 +179,9 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
         porcentaje_avance=avance.porcentaje_avance,
         observaciones=avance.observaciones,
         rutas_fotografias=avance.rutas_fotografias,
-        tipo_periodo=avance.tipo_periodo
+        tipo_periodo=avance.tipo_periodo,
+        fecha_fin=avance.fecha_fin,
+        dias_trabajados=avance.dias_trabajados
     )
     
     try:
