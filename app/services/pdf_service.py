@@ -1,6 +1,7 @@
 from fpdf import FPDF
 import tempfile
 import os
+from collections import defaultdict
 from app.services.chart_service import generar_curva_s
 
 def crear_pdf_avance(proyecto, avance, texto_ai):
@@ -233,31 +234,47 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
-        pdf.set_font('Arial', 'B', 8)
-        pdf.set_fill_color(220, 230, 241)
-        pdf.cell(38, 8, ' Categoria', border=1, fill=True)
-        pdf.cell(62, 8, ' Descripcion / Rubro', border=1, fill=True)
-        pdf.cell(15, 8, ' Und.', align='C', border=1, fill=True)
-        pdf.cell(15, 8, ' Cant.', align='C', border=1, fill=True)
-        pdf.cell(20, 8, ' P.Unit', align='C', border=1, fill=True)
-        pdf.cell(15, 8, ' Dias', align='C', border=1, fill=True)
-        pdf.cell(25, 8, ' Total S/.', align='R', border=1, fill=True, ln=True)
-        
-        pdf.set_font('Arial', '', 8)
+        grupos_fijos = defaultdict(list)
         for ob in proyecto.mano_de_obra:
-            cat_safe = (getattr(ob, 'categoria', '') or 'Mano de Obra').encode('latin-1', 'replace').decode('latin-1')
-            if len(cat_safe) > 22: cat_safe = cat_safe[:19] + "..."
+            cat = getattr(ob, 'categoria', '') or 'Mano de Obra'
+            cat = cat.strip().upper()
+            grupos_fijos[cat].append(ob)
             
-            desc_safe = ob.descripcion.encode('latin-1', 'replace').decode('latin-1')
-            if len(desc_safe) > 38: desc_safe = desc_safe[:35] + "..."
-                 
-            pdf.cell(38, 7, f' {cat_safe}', border=1)
-            pdf.cell(62, 7, f' {desc_safe}', border=1)
-            pdf.cell(15, 7, f" {getattr(ob, 'unidad', '') or '-'}", align='C', border=1)
-            pdf.cell(15, 7, f" {ob.cantidad_trabajadores}", align='C', border=1)
-            pdf.cell(20, 7, f" {getattr(ob, 'precio_unitario', 0.0):.2f}", align='C', border=1)
-            pdf.cell(15, 7, f" {getattr(ob, 'dias', 1.0)}", align='C', border=1)
-            pdf.cell(25, 7, f" {ob.total:.2f}", align='R', border=1, ln=True)
+        for cat, items in grupos_fijos.items():
+            pdf.set_font('Arial', 'B', 9)
+            pdf.set_fill_color(0, 51, 102)
+            pdf.set_text_color(255, 255, 255)
+            pdf.cell(190, 8, f'  CATEGORIA: {cat}', border=1, fill=True, ln=True)
+            
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font('Arial', 'B', 8)
+            pdf.set_fill_color(220, 230, 241)
+            pdf.cell(90, 8, ' Descripcion / Rubro', border=1, fill=True)
+            pdf.cell(15, 8, ' Und.', align='C', border=1, fill=True)
+            pdf.cell(20, 8, ' Cant.', align='C', border=1, fill=True)
+            pdf.cell(20, 8, ' P.Unit', align='C', border=1, fill=True)
+            pdf.cell(15, 8, ' Dias', align='C', border=1, fill=True)
+            pdf.cell(30, 8, ' Total S/.', align='R', border=1, fill=True, ln=True)
+            
+            subtotal_cat = 0.0
+            pdf.set_font('Arial', '', 8)
+            for ob in items:
+                desc_safe = ob.descripcion.encode('latin-1', 'replace').decode('latin-1')
+                if len(desc_safe) > 55: desc_safe = desc_safe[:52] + "..."
+                     
+                pdf.cell(90, 7, f' {desc_safe}', border=1)
+                pdf.cell(15, 7, f" {getattr(ob, 'unidad', '') or '-'}", align='C', border=1)
+                pdf.cell(20, 7, f" {ob.cantidad_trabajadores}", align='C', border=1)
+                pdf.cell(20, 7, f" {getattr(ob, 'precio_unitario', 0.0):.2f}", align='C', border=1)
+                pdf.cell(15, 7, f" {getattr(ob, 'dias', 1.0)}", align='C', border=1)
+                pdf.cell(30, 7, f" {ob.total:.2f}", align='R', border=1, ln=True)
+                subtotal_cat += ob.total
+                
+            pdf.set_font('Arial', 'B', 8)
+            pdf.set_fill_color(245, 245, 245)
+            pdf.cell(160, 7, f' SUBTOTAL {cat}:', align='R', border=1, fill=True)
+            pdf.cell(30, 7, f' S/ {subtotal_cat:.2f}', align='R', border=1, fill=True, ln=True)
+            pdf.ln(4)
 
     # ------------------ PÁGINA 4: ANEXO DE COSTOS VARIABLES ---------------- #
     if proyecto.materiales:
@@ -268,31 +285,47 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
-        pdf.set_font('Arial', 'B', 8)
-        pdf.set_fill_color(220, 230, 241)
-        pdf.cell(38, 8, ' Categoria', border=1, fill=True)
-        pdf.cell(62, 8, ' Descripcion / Insumo', border=1, fill=True)
-        pdf.cell(15, 8, ' Und.', align='C', border=1, fill=True)
-        pdf.cell(15, 8, ' Cant.', align='C', border=1, fill=True)
-        pdf.cell(20, 8, ' P.Unit', align='C', border=1, fill=True)
-        pdf.cell(15, 8, ' Dias', align='C', border=1, fill=True)
-        pdf.cell(25, 8, ' Total S/.', align='R', border=1, fill=True, ln=True)
-        
-        pdf.set_font('Arial', '', 8)
+        grupos_vars = defaultdict(list)
         for mat in proyecto.materiales:
-            cat_safe = (getattr(mat, 'categoria', '') or 'Materiales').encode('latin-1', 'replace').decode('latin-1')
-            if len(cat_safe) > 22: cat_safe = cat_safe[:19] + "..."
+            cat = getattr(mat, 'categoria', '') or 'Materiales'
+            cat = cat.strip().upper()
+            grupos_vars[cat].append(mat)
             
-            desc_safe = mat.descripcion.encode('latin-1', 'replace').decode('latin-1')
-            if len(desc_safe) > 38: desc_safe = desc_safe[:35] + "..."
-                 
-            pdf.cell(38, 7, f' {cat_safe}', border=1)
-            pdf.cell(62, 7, f' {desc_safe}', border=1)
-            pdf.cell(15, 7, f" {getattr(mat, 'unidad', '') or '-'}", align='C', border=1)
-            pdf.cell(15, 7, f" {mat.cantidad}", align='C', border=1)
-            pdf.cell(20, 7, f" {getattr(mat, 'precio_unitario', 0.0):.2f}", align='C', border=1)
-            pdf.cell(15, 7, f" {getattr(mat, 'dias', 1.0)}", align='C', border=1)
-            pdf.cell(25, 7, f" {mat.total:.2f}", align='R', border=1, ln=True)
+        for cat, items in grupos_vars.items():
+            pdf.set_font('Arial', 'B', 9)
+            pdf.set_fill_color(0, 51, 102)
+            pdf.set_text_color(255, 255, 255)
+            pdf.cell(190, 8, f'  CATEGORIA: {cat}', border=1, fill=True, ln=True)
+            
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font('Arial', 'B', 8)
+            pdf.set_fill_color(220, 230, 241)
+            pdf.cell(90, 8, ' Descripcion / Insumo', border=1, fill=True)
+            pdf.cell(15, 8, ' Und.', align='C', border=1, fill=True)
+            pdf.cell(20, 8, ' Cant.', align='C', border=1, fill=True)
+            pdf.cell(20, 8, ' P.Unit', align='C', border=1, fill=True)
+            pdf.cell(15, 8, ' Dias', align='C', border=1, fill=True)
+            pdf.cell(30, 8, ' Total S/.', align='R', border=1, fill=True, ln=True)
+            
+            subtotal_cat = 0.0
+            pdf.set_font('Arial', '', 8)
+            for mat in items:
+                desc_safe = mat.descripcion.encode('latin-1', 'replace').decode('latin-1')
+                if len(desc_safe) > 55: desc_safe = desc_safe[:52] + "..."
+                     
+                pdf.cell(90, 7, f' {desc_safe}', border=1)
+                pdf.cell(15, 7, f" {getattr(mat, 'unidad', '') or '-'}", align='C', border=1)
+                pdf.cell(20, 7, f" {mat.cantidad}", align='C', border=1)
+                pdf.cell(20, 7, f" {getattr(mat, 'precio_unitario', 0.0):.2f}", align='C', border=1)
+                pdf.cell(15, 7, f" {getattr(mat, 'dias', 1.0)}", align='C', border=1)
+                pdf.cell(30, 7, f" {mat.total:.2f}", align='R', border=1, ln=True)
+                subtotal_cat += mat.total
+
+            pdf.set_font('Arial', 'B', 8)
+            pdf.set_fill_color(245, 245, 245)
+            pdf.cell(160, 7, f' SUBTOTAL {cat}:', align='R', border=1, fill=True)
+            pdf.cell(30, 7, f' S/ {subtotal_cat:.2f}', align='R', border=1, fill=True, ln=True)
+            pdf.ln(4)
 
     # ------------------ PÁGINA 5: PRESUPUESTO RESUMEN ---------------- #
     pdf.add_page()
