@@ -88,34 +88,47 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.set_font('Arial', '', 10)
     
     if avance.rutas_fotografias:
-        foto_safe = avance.rutas_fotografias.encode('latin-1', 'replace').decode('latin-1')
-        pdf.multi_cell(0, 6, f"Se ha adjuntado una fotografía en este reporte.")
+        rutas = avance.rutas_fotografias.split(',')
+        pdf.multi_cell(0, 6, f"Se han adjuntado {len(rutas)} fotografías técnicas en este reporte.")
         pdf.ln(5)
-        # Calcular path fisico nativo
+        
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        img_path = os.path.join(base_dir, foto_safe.replace('/', os.sep))
-        if os.path.exists(img_path):
-            try:
-                # Pegar la imagen ajustando su ancho a 150 para que no desborde la pagina
-                pdf.image(img_path, x=30, w=150)
-            except Exception as e:
-                pdf.set_text_color(255, 0, 0)
-                pdf.multi_cell(0, 6, f"(Error al acoplar la imagen: Imagen en formato avanzado u orientacion incompatible)")
-                pdf.set_text_color(0, 0, 0)
-        else:
-            pdf.multi_cell(0, 6, "(Imagen no localizada temporalmente en el disco del servidor)")
+        current_y = pdf.get_y()
+        max_h = 0
+        
+        for idx, foto in enumerate(rutas):
+            foto_safe = foto.encode('latin-1', 'replace').decode('latin-1').strip()
+            img_path = os.path.join(base_dir, foto_safe.replace('/', os.sep))
+            
+            if os.path.exists(img_path):
+                try:
+                    if len(rutas) == 1:
+                        # Para 1 foto, se inserta normalmente afectando el cursor Y, sin romper flujo
+                        pdf.image(img_path, x=30, w=150)
+                    else:
+                        # Grid manual iterativo de 2x2. Maximo 4.
+                        col_index = idx % 2
+                        row_index = idx // 2
+                        x_coord = 15 if col_index == 0 else 110
+                        # Otorgamos 80 unidades de alto estimado para cada row para evitar overlap vertical
+                        y_coord = current_y + (row_index * 80)
+                        pdf.image(img_path, x=x_coord, y=y_coord, w=85)
+                        max_h = max(max_h, (row_index + 1) * 80)
+                except Exception as e:
+                    pdf.set_y(current_y + 10)
+                    pdf.set_text_color(255, 0, 0)
+                    pdf.multi_cell(0, 6, f"(Error acoplando imagen {idx+1})")
+                    pdf.set_text_color(0, 0, 0)
+            else:
+                 pdf.multi_cell(0, 6, f"(No se halló evidencia {idx+1} local)")
+                 
+        if len(rutas) > 1:
+             pdf.set_y(current_y + max_h + 10)
     else:
         pdf.multi_cell(0, 6, "(No se insertaron imagenes fotograficas para esta semana).")
         
-    pdf.ln(15)
     
-    # Firmas
-    pdf.set_font('Arial', 'B', 10)
-    pdf.cell(0, 10, '________________________', ln=True, align='C')
-    pdf.cell(0, 5, 'Firma y Sello', ln=True, align='C')
-    pdf.set_font('Arial', '', 9)
-    pdf.cell(0, 5, 'Ingeniero Responsable / Inspector', ln=True, align='C')
-    
+
     # ------------------ PÁGINA 2: ANEXO DE CURVA S ------------------ #
     pdf.add_page()
     pdf.set_text_color(0, 51, 102)
@@ -157,14 +170,14 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
         pdf.add_page()
         pdf.set_text_color(0, 51, 102)
         pdf.set_font('Arial', 'B', 12)
-        pdf.cell(0, 10, 'ANEXO II: REPORTE CONSOLIDADO DE MATERIALES Y EQUIPOS', ln=True, align='C')
+        pdf.cell(0, 10, 'ANEXO II: REPORTE CONSOLIDADO DE MATERIALES', ln=True, align='C')
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
         # Headers Tabla
         pdf.set_font('Arial', 'B', 9)
         pdf.set_fill_color(220, 230, 241)
-        pdf.cell(95, 8, ' Descripcion del Insumo / Equipo', border=1, fill=True)
+        pdf.cell(95, 8, ' Descripcion del Insumo', border=1, fill=True)
         pdf.cell(30, 8, ' Cantidad', align='C', border=1, fill=True)
         pdf.cell(25, 8, ' Unidad', align='C', border=1, fill=True)
         pdf.cell(40, 8, ' Costo Total Previsto', align='R', border=1, fill=True, ln=True)
@@ -180,6 +193,16 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
             pdf.cell(30, 7, f' {mat.cantidad}', align='C', border=1)
             pdf.cell(25, 7, f' {mat.unidad}', align='C', border=1)
             pdf.cell(40, 7, f' S/ {mat.total}', align='R', border=1, ln=True)
+            
+    pdf.ln(25)
+    
+    # Firmas
+    # Las firmas ahora estarán SIEMPRE obligatoriamente en la estructura final de todo el documento
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 10, '________________________', ln=True, align='C')
+    pdf.cell(0, 5, 'Firma y Sello', ln=True, align='C')
+    pdf.set_font('Arial', '', 9)
+    pdf.cell(0, 5, 'Ingeniero Responsable / Inspector', ln=True, align='C')
             
     # Guardar en archivo temporal seguro
     fd, temp_path = tempfile.mkstemp(suffix='.pdf')

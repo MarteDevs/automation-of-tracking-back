@@ -167,22 +167,33 @@ def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depend
     )
 
 @router.post("/api/v1/upload-imagen/")
-async def upload_imagen(file: UploadFile = File(...)):
-    ext = file.filename.split('.')[-1].lower()
-    if ext not in ['jpg', 'jpeg', 'png']:
-        raise HTTPException(status_code=400, detail="El archivo debe ser de formato gráfico (JPG/PNG)")
+async def upload_imagen(files: List[UploadFile] = File(...)):
+    rutas = []
     
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    save_path = os.path.join(base_dir, "uploads", "evidencias", filename)
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    # Procesar max 4 iteraciones de seguridad
+    archivos_procesables = files[:4]
     
-    try:
-        with open(save_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"No se pudo guardar: {e}")
+    for file in archivos_procesables:
+        ext = file.filename.split('.')[-1].lower()
+        if ext not in ['jpg', 'jpeg', 'png']:
+            continue
+            
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        save_path = os.path.join(base_dir, "uploads", "evidencias", filename)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         
-    return {"ruta_fotografias": f"uploads/evidencias/{filename}"}
+        try:
+            with open(save_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            rutas.append(f"uploads/evidencias/{filename}")
+        except Exception as e:
+            print(f"Error parcial ignorado {e}")
+            pass
+            
+    if not rutas:
+        raise HTTPException(status_code=400, detail="No se guardó material grafico válido (solo admite JPG/PNG).")
+        
+    return {"ruta_fotografias": ",".join(rutas)}
 
 
