@@ -77,6 +77,13 @@ async def procesar_presupuesto(request: Request, file: UploadFile = File(...), d
     temp_path = f"temp/{unique_filename}"
     os.makedirs("temp", exist_ok=True)
     
+    # 0. Verificar tamaño del archivo (Max 10MB)
+    MAX_FILE_SIZE = 10 * 1024 * 1024
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="El archivo PDF excede el límite de 10MB.")
+    await file.seek(0) # Reset para poder copiar el archivo despues
+
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -226,6 +233,19 @@ async def upload_imagen(files: List[UploadFile] = File(...)):
         save_path = os.path.join(base_dir, "uploads", "evidencias", filename)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         
+        # Verificar tamaño individual (Max 10MB)
+        MAX_IMG_SIZE = 10 * 1024 * 1024
+        file_size = 0
+        
+        # Obtener tamaño sin leer todo el contenido a memoria si es posible
+        file.file.seek(0, os.SEEK_END)
+        file_size = file.file.tell()
+        file.file.seek(0)
+        
+        if file_size > MAX_IMG_SIZE:
+            print(f"Archivo {file.filename} omitido por exceso de tamaño ({file_size} bytes)")
+            continue
+
         try:
             with open(save_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
