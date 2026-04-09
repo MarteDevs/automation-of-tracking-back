@@ -1,6 +1,7 @@
 from fpdf import FPDF
 import tempfile
 import os
+from app.services.chart_service import generar_curva_s
 
 def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf = FPDF()
@@ -115,6 +116,42 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.set_font('Arial', '', 9)
     pdf.cell(0, 5, 'Ingeniero Responsable / Inspector', ln=True, align='C')
     
+    # ------------------ PÁGINA 2: ANEXO DE CURVA S ------------------ #
+    pdf.add_page()
+    pdf.set_text_color(0, 51, 102)
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, 'ANEXO I: ESTADISTICA DE CURVA "S" (PLAN VS REAL)', ln=True, align='C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(5)
+    
+    try:
+        # Extraer todo el historico de este proyecto (limitado hasta la semana de este reporte)
+        todos_avances = sorted(proyecto.avances, key=lambda x: x.semana)
+        semanas_x = [a.semana for a in todos_avances if a.semana <= avance.semana]
+        porcentajes_y = [a.porcentaje_avance for a in todos_avances if a.semana <= avance.semana]
+        
+        # Generar PNG nativo
+        sems = proyecto.semanas_estimadas or 1
+        nomb = proyecto.nombre_proyecto.encode('latin-1', 'replace').decode('latin-1')
+        grafico_rut = generar_curva_s(semanas_x, porcentajes_y, sems, nomb)
+        
+        # Pegar el PNG en el PDF
+        pdf.image(grafico_rut, x=5, w=200)
+        
+        # Borrar el grafico temporal
+        os.remove(grafico_rut)
+        
+    except Exception as e:
+        pdf.set_text_color(255, 0, 0)
+        pdf.multi_cell(0, 6, f"(Error generando Anexo Estadistico: {e})")
+        pdf.set_text_color(0, 0, 0)
+        
+    pdf.ln(10)
+    pdf.set_font('Arial', '', 9)
+    pdf.set_text_color(100, 100, 100)
+    pdf.multi_cell(0, 5, f"(*) La Curva Logística S (Programada) es calculada asumiendo un avance de forma "
+                         f"Normal y Logistica asintotica durante las {proyecto.semanas_estimadas} Semanas pronosticadas de ejecucion general.")
+                         
     # Guardar en archivo temporal seguro
     fd, temp_path = tempfile.mkstemp(suffix='.pdf')
     os.close(fd)

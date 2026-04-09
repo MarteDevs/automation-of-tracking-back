@@ -3,11 +3,18 @@ from typing import List, Optional
 
 # --- SCHEMAS BASE (Para crear/leer) ---
 
-class ProyectoInfoBase(BaseModel):
+class ProyectoBase(BaseModel):
     nombre_proyecto: str
     fecha: str
     costo_total: float
     utilidad_porcentaje: float
+    semanas_estimadas: Optional[int] = 0
+
+class ProyectoCreate(ProyectoBase):
+    pass
+
+class ProyectoUpdate(BaseModel):
+    semanas_estimadas: int
 
 class ManoObraBase(BaseModel):
     descripcion: str
@@ -34,7 +41,7 @@ class AvanceSemanalCreate(AvanceSemanalBase):
 # Este schema validará exactamente lo que extraiga OpenAI del PDF
 
 class PresupuestoExtraidoSchema(BaseModel):
-    proyecto_info: ProyectoInfoBase
+    proyecto_info: ProyectoBase
     mano_de_obra: List[ManoObraBase]
     materiales_y_equipos: List[MaterialEquipoBase]
 
@@ -62,7 +69,7 @@ class AvanceSemanalResponse(AvanceSemanalBase):
     class Config:
         from_attributes = True
 
-class ProyectoResponse(ProyectoInfoBase):
+class ProyectoResponse(ProyectoBase):
     id: int
     mano_de_obra: List[ManoObraResponse] = []
     materiales: List[MaterialEquipoResponse] = []

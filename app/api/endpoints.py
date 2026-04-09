@@ -13,6 +13,17 @@ from fastapi.responses import FileResponse
 
 router = APIRouter()
 
+@router.put("/api/v1/proyectos/{proyecto_id}/configuracion", response_model=project_schema.ProyectoResponse)
+def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.ProyectoUpdate, db: Session = Depends(get_db)):
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    
+    proyecto.semanas_estimadas = config.semanas_estimadas
+    db.commit()
+    db.refresh(proyecto)
+    return proyecto
+
 @router.post("/api/v1/procesar-presupuesto/", response_model=project_schema.ProyectoResponse)
 async def procesar_presupuesto(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename.endswith('.pdf'):

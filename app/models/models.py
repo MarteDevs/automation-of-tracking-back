@@ -10,6 +10,7 @@ class Proyecto(Base):
     fecha = Column(String) # Puedes usar Date si parseas la fecha del JSON
     costo_total = Column(Float)
     utilidad_porcentaje = Column(Float)
+    semanas_estimadas = Column(Integer, default=0)
 
     # Relaciones: Un proyecto tiene mucha mano de obra, materiales y avances
     mano_de_obra = relationship("ManoObra", back_populates="proyecto", cascade="all, delete-orphan")
