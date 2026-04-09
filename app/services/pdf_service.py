@@ -195,63 +195,126 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.multi_cell(0, 5, f"(*) La Curva Logística S (Programada) es calculada asumiendo un avance de forma "
                          f"Normal y Logistica asintotica durante las {proyecto.semanas_estimadas} Semanas pronosticadas de ejecucion general.")
                          
-    # ------------------ PÁGINA 3: ANEXO DE MATERIALES ---------------- #
-    if proyecto.materiales:
-        pdf.add_page()
-        pdf.set_text_color(0, 51, 102)
-        pdf.set_font('Arial', 'B', 12)
-        pdf.cell(0, 10, 'ANEXO II: REPORTE CONSOLIDADO DE MATERIALES', ln=True, align='C')
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(5)
-        
-        # Headers Tabla
-        pdf.set_font('Arial', 'B', 9)
-        pdf.set_fill_color(220, 230, 241)
-        pdf.cell(95, 8, ' Descripcion del Insumo', border=1, fill=True)
-        pdf.cell(30, 8, ' Cantidad', align='C', border=1, fill=True)
-        pdf.cell(25, 8, ' Unidad', align='C', border=1, fill=True)
-        pdf.cell(40, 8, ' Costo Total Previsto', align='R', border=1, fill=True, ln=True)
-        
-        pdf.set_font('Arial', '', 9)
-        for mat in proyecto.materiales:
-            desc_safe = mat.descripcion.encode('latin-1', 'replace').decode('latin-1')
-            # Acortar la descripcion si es muy larga para que no desborde la fila (limite ~50 chars para 95 pts)
-            if len(desc_safe) > 52:
-                 desc_safe = desc_safe[:49] + "..."
-                 
-            pdf.cell(95, 7, f' {desc_safe}', border=1)
-            pdf.cell(30, 7, f' {mat.cantidad}', align='C', border=1)
-            pdf.cell(25, 7, f' {mat.unidad}', align='C', border=1)
-            pdf.cell(40, 7, f' S/ {mat.total}', align='R', border=1, ln=True)
-            
-            
-    # ------------------ PÁGINA 4: ANEXO DE MANO DE OBRA ---------------- #
+    # ------------------ PÁGINA 3: ANEXO DE COSTOS FIJOS ---------------- #
     if proyecto.mano_de_obra:
         pdf.add_page()
         pdf.set_text_color(0, 51, 102)
         pdf.set_font('Arial', 'B', 12)
-        pdf.cell(0, 10, 'ANEXO III: REPORTE CONSOLIDADO DE MANO DE OBRA', ln=True, align='C')
+        pdf.cell(0, 10, 'ANEXO II: REPORTE CONSOLIDADO DE COSTOS FIJOS', ln=True, align='C')
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
         
-        # Headers Tabla Mano de Obra
-        pdf.set_font('Arial', 'B', 9)
+        pdf.set_font('Arial', 'B', 8)
         pdf.set_fill_color(220, 230, 241)
-        pdf.cell(95, 8, ' Especialidad / Descripcion', border=1, fill=True)
-        pdf.cell(30, 8, ' Trabajadores', align='C', border=1, fill=True)
-        pdf.cell(25, 8, ' P. Unitario', align='C', border=1, fill=True)
-        pdf.cell(40, 8, ' Costo Total Estimado', align='R', border=1, fill=True, ln=True)
+        pdf.cell(38, 8, ' Categoria', border=1, fill=True)
+        pdf.cell(62, 8, ' Descripcion / Rubro', border=1, fill=True)
+        pdf.cell(15, 8, ' Und.', align='C', border=1, fill=True)
+        pdf.cell(15, 8, ' Cant.', align='C', border=1, fill=True)
+        pdf.cell(20, 8, ' P.Unit', align='C', border=1, fill=True)
+        pdf.cell(15, 8, ' Dias', align='C', border=1, fill=True)
+        pdf.cell(25, 8, ' Total S/.', align='R', border=1, fill=True, ln=True)
         
-        pdf.set_font('Arial', '', 9)
+        pdf.set_font('Arial', '', 8)
         for ob in proyecto.mano_de_obra:
+            cat_safe = (getattr(ob, 'categoria', '') or 'Mano de Obra').encode('latin-1', 'replace').decode('latin-1')
+            if len(cat_safe) > 22: cat_safe = cat_safe[:19] + "..."
+            
             desc_safe = ob.descripcion.encode('latin-1', 'replace').decode('latin-1')
-            if len(desc_safe) > 52:
-                 desc_safe = desc_safe[:49] + "..."
+            if len(desc_safe) > 38: desc_safe = desc_safe[:35] + "..."
                  
-            pdf.cell(95, 7, f' {desc_safe}', border=1)
-            pdf.cell(30, 7, f' {ob.cantidad_trabajadores}', align='C', border=1)
-            pdf.cell(25, 7, f' S/ {ob.precio_unitario}', align='C', border=1)
-            pdf.cell(40, 7, f' S/ {ob.total}', align='R', border=1, ln=True)
+            pdf.cell(38, 7, f' {cat_safe}', border=1)
+            pdf.cell(62, 7, f' {desc_safe}', border=1)
+            pdf.cell(15, 7, f" {getattr(ob, 'unidad', '') or '-'}", align='C', border=1)
+            pdf.cell(15, 7, f" {ob.cantidad_trabajadores}", align='C', border=1)
+            pdf.cell(20, 7, f" {getattr(ob, 'precio_unitario', 0.0):.2f}", align='C', border=1)
+            pdf.cell(15, 7, f" {getattr(ob, 'dias', 1.0)}", align='C', border=1)
+            pdf.cell(25, 7, f" {ob.total:.2f}", align='R', border=1, ln=True)
+
+    # ------------------ PÁGINA 4: ANEXO DE COSTOS VARIABLES ---------------- #
+    if proyecto.materiales:
+        pdf.add_page()
+        pdf.set_text_color(0, 51, 102)
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 10, 'ANEXO III: REPORTE CONSOLIDADO DE COSTOS VARIABLES', ln=True, align='C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(5)
+        
+        pdf.set_font('Arial', 'B', 8)
+        pdf.set_fill_color(220, 230, 241)
+        pdf.cell(38, 8, ' Categoria', border=1, fill=True)
+        pdf.cell(62, 8, ' Descripcion / Insumo', border=1, fill=True)
+        pdf.cell(15, 8, ' Und.', align='C', border=1, fill=True)
+        pdf.cell(15, 8, ' Cant.', align='C', border=1, fill=True)
+        pdf.cell(20, 8, ' P.Unit', align='C', border=1, fill=True)
+        pdf.cell(15, 8, ' Dias', align='C', border=1, fill=True)
+        pdf.cell(25, 8, ' Total S/.', align='R', border=1, fill=True, ln=True)
+        
+        pdf.set_font('Arial', '', 8)
+        for mat in proyecto.materiales:
+            cat_safe = (getattr(mat, 'categoria', '') or 'Materiales').encode('latin-1', 'replace').decode('latin-1')
+            if len(cat_safe) > 22: cat_safe = cat_safe[:19] + "..."
+            
+            desc_safe = mat.descripcion.encode('latin-1', 'replace').decode('latin-1')
+            if len(desc_safe) > 38: desc_safe = desc_safe[:35] + "..."
+                 
+            pdf.cell(38, 7, f' {cat_safe}', border=1)
+            pdf.cell(62, 7, f' {desc_safe}', border=1)
+            pdf.cell(15, 7, f" {getattr(mat, 'unidad', '') or '-'}", align='C', border=1)
+            pdf.cell(15, 7, f" {mat.cantidad}", align='C', border=1)
+            pdf.cell(20, 7, f" {getattr(mat, 'precio_unitario', 0.0):.2f}", align='C', border=1)
+            pdf.cell(15, 7, f" {getattr(mat, 'dias', 1.0)}", align='C', border=1)
+            pdf.cell(25, 7, f" {mat.total:.2f}", align='R', border=1, ln=True)
+
+    # ------------------ PÁGINA 5: PRESUPUESTO RESUMEN ---------------- #
+    pdf.add_page()
+    pdf.set_text_color(0, 51, 102)
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, 'ANEXO IV: PRESUPUESTO RESUMEN DEL PROYECTO', ln=True, align='C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(10)
+    
+    # Cálculos Financieros
+    costo_mo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', []))
+    costo_mat = sum(mat.total for mat in getattr(proyecto, 'materiales', []))
+    costo_directo = costo_mo + costo_mat
+    
+    gastos_generales = costo_directo * 0.10
+    utilidad_porc = (proyecto.utilidad_porcentaje / 100.0) if proyecto.utilidad_porcentaje else 0.15
+    utilidad_moneda = costo_directo * utilidad_porc
+    subtotal = costo_directo + gastos_generales + utilidad_moneda
+    igv = subtotal * 0.18
+    presupuesto_total = subtotal + igv
+    
+    # Dibujar Tabla Centrada
+    pdf.set_x(35)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(70, 10, ' COSTO DIRECTO', border=1)
+    pdf.cell(50, 10, f' S/ {costo_directo:,.2f}', border=1, align='R', ln=True)
+    
+    pdf.set_x(35)
+    pdf.set_font('Arial', '', 10)
+    pdf.cell(70, 10, ' GASTOS GENERALES (10%)', border=1)
+    pdf.cell(50, 10, f' S/ {gastos_generales:,.2f}', border=1, align='R', ln=True)
+    
+    pdf.set_x(35)
+    pdf.cell(70, 10, f' UTILIDAD ({(utilidad_porc * 100):.0f}%)', border=1)
+    pdf.cell(50, 10, f' S/ {utilidad_moneda:,.2f}', border=1, align='R', ln=True)
+    
+    pdf.set_x(35)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(70, 10, ' SUBTOTAL', border=1)
+    pdf.cell(50, 10, f' S/ {subtotal:,.2f}', border=1, align='R', ln=True)
+    
+    pdf.set_x(35)
+    pdf.set_font('Arial', '', 10)
+    pdf.cell(70, 10, ' IGV (18%)', border=1)
+    pdf.cell(50, 10, f' S/ {igv:,.2f}', border=1, align='R', ln=True)
+    
+    pdf.set_x(35)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(70, 12, ' PRESUPUESTO TOTAL DEL PROYECTO', border=1, fill=True)
+    pdf.cell(50, 12, f' S/ {presupuesto_total:,.2f}', border=1, align='R', fill=True, ln=True)
 
     pdf.ln(25)
     
