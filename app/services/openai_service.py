@@ -27,6 +27,11 @@ def analizar_presupuesto_pdf(ruta_archivo_pdf):
         Analiza el texto provisto y extrae la información en un formato JSON estricto.
         No agregues saludos, explicaciones ni formato Markdown (```json). Devuelve SOLO el JSON puro.
         
+        REGLAS CRÍTICAS PARA LA EXTRACCIÓN:
+        1. Para el "nombre_proyecto", busca la descripción exacta del servicio o fabricación. Este nombre suele estar ubicado directamente **debajo de los subtítulos "TRABAJOS REALIZADOS"**.
+        2. NO asignes el nombre de la Unidad Minera o nombres muy grandes (ejemplo: "SOLEDAD", "ESPERANZA") como el nombre del proyecto.
+        3. Ignora estados del Excel como "FALTA GUARDAR", no deben ir en el titulo.
+        
         Usa esta estructura exacta:
         {
             "proyecto_info": {
