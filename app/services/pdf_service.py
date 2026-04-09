@@ -66,7 +66,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     
     # Resumen de IA
     pdf.set_font('Arial', 'B', 11)
-    pdf.cell(0, 8, ' 3. RESUMEN EJECUTIVO (Evaluacion IA)', ln=True)
+    pdf.cell(0, 8, ' 3. RESUMEN EJECUTIVO', ln=True)
     pdf.set_font('Arial', 'I', 10)
     
     # Texto de IA
@@ -90,44 +90,58 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.set_font('Arial', '', 10)
     
     if avance.rutas_fotografias:
-        rutas = avance.rutas_fotografias.split(',')
-        pdf.multi_cell(0, 6, f"Se han adjuntado {len(rutas)} fotografías técnicas en este reporte.")
+        rutas = [r.strip() for r in avance.rutas_fotografias.split(',') if r.strip()]
+        pdf.multi_cell(0, 6, f"Se han adjuntado {len(rutas)} fotografias tecnicas en este reporte.")
         pdf.ln(5)
         
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        current_y = pdf.get_y()
-        max_h = 0
         
-        for idx, foto in enumerate(rutas):
+        # Configuración del grid adaptativo
+        IMG_W = 88          # ancho de cada imagen en mm
+        IMG_H = 75          # alto máximo reservado por fila
+        MARGIN_LEFT = 10    # margen izquierdo
+        COL_GAP = 7         # separación entre columnas
+        PAGE_BOTTOM = 270   # límite inferior (A4 = 297mm, margen inferior ~27mm)
+        
+        valid_images = []
+        for foto in rutas:
             foto_safe = foto.encode('latin-1', 'replace').decode('latin-1').strip()
             img_path = os.path.join(base_dir, foto_safe.replace('/', os.sep))
-            
             if os.path.exists(img_path):
+                valid_images.append(img_path)
+        
+        # Insertar de a pares (2 columnas)
+        for i in range(0, len(valid_images), 2):
+            pair = valid_images[i:i+2]
+            
+            # Verificar si hay espacio para esta fila; si no, nueva página
+            if pdf.get_y() + IMG_H > PAGE_BOTTOM:
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 10)
+                pdf.set_fill_color(220, 230, 241)
+                pdf.cell(0, 7, ' (continuacion - Evidencia Fotografica)', border=1, ln=True, fill=True)
+                pdf.ln(4)
+            
+            row_y = pdf.get_y()
+            
+            for j, img_path in enumerate(pair):
+                x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
                 try:
-                    if len(rutas) == 1:
-                        # Para 1 foto, se inserta normalmente afectando el cursor Y, sin romper flujo
-                        pdf.image(img_path, x=30, w=150)
-                    else:
-                        # Grid manual iterativo de 2x2. Maximo 4.
-                        col_index = idx % 2
-                        row_index = idx // 2
-                        x_coord = 15 if col_index == 0 else 110
-                        # Otorgamos 80 unidades de alto estimado para cada row para evitar overlap vertical
-                        y_coord = current_y + (row_index * 80)
-                        pdf.image(img_path, x=x_coord, y=y_coord, w=85)
-                        max_h = max(max_h, (row_index + 1) * 80)
+                    pdf.image(img_path, x=x_coord, y=row_y, w=IMG_W, h=0)  # h=0 = mantener proporción
                 except Exception as e:
-                    pdf.set_y(current_y + 10)
-                    pdf.set_text_color(255, 0, 0)
-                    pdf.multi_cell(0, 6, f"(Error acoplando imagen {idx+1})")
+                    # Si la imagen falla, colocar un placeholder de texto
+                    pdf.set_xy(x_coord, row_y)
+                    pdf.set_text_color(200, 0, 0)
+                    pdf.multi_cell(IMG_W, 6, f"(Error imagen {i+j+1}: {str(e)[:40]})")
                     pdf.set_text_color(0, 0, 0)
-            else:
-                 pdf.multi_cell(0, 6, f"(No se halló evidencia {idx+1} local)")
-                 
-        if len(rutas) > 1:
-             pdf.set_y(current_y + max_h + 10)
+            
+            # Avanzar cursor Y al final de esta fila
+            pdf.set_y(row_y + IMG_H + 5)
+        
+        pdf.ln(5)
     else:
         pdf.multi_cell(0, 6, "(No se insertaron imagenes fotograficas para esta semana).")
+
         
     
 
