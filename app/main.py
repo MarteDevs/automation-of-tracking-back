@@ -25,9 +25,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Migración automática: añadir columna tipo_periodo si no existe ──
+def run_migrations():
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            # Verificar si la columna ya existe en SQLite
+            result = conn.execute(text("PRAGMA table_info(avances_semanales)"))
+            columns = [row[1] for row in result.fetchall()]
+            if "tipo_periodo" not in columns:
+                conn.execute(text(
+                    "ALTER TABLE avances_semanales ADD COLUMN tipo_periodo VARCHAR DEFAULT 'SEMANA' NOT NULL"
+                ))
+                conn.commit()
+                print("✔ Migración aplicada: columna tipo_periodo añadida.")
+            else:
+                print("✔ Columna tipo_periodo ya existe. No se requiere migración.")
+        except Exception as e:
+            print(f"⚠ Error en migración: {e}")
+
+run_migrations()
+
 # Incluimos las rutas definidas en la capa API
 app.include_router(endpoints.router)
 
 @app.get("/")
 def read_root():
     return {"mensaje": "API de Control de Proyectos operativa"}
+

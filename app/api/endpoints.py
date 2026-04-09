@@ -177,7 +177,8 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
         semana=avance.semana,
         porcentaje_avance=avance.porcentaje_avance,
         observaciones=avance.observaciones,
-        rutas_fotografias=avance.rutas_fotografias
+        rutas_fotografias=avance.rutas_fotografias,
+        tipo_periodo=avance.tipo_periodo
     )
     
     try:

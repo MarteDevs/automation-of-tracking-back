@@ -33,6 +33,7 @@ class AvanceSemanalBase(BaseModel):
     porcentaje_avance: float
     observaciones: Optional[str] = None
     rutas_fotografias: Optional[str] = None
+    tipo_periodo: str = "SEMANA"  # SEMANA o DIA
 
 class AvanceSemanalCreate(AvanceSemanalBase):
     pass

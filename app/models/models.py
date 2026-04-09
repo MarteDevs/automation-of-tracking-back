@@ -50,5 +50,7 @@ class AvanceSemanal(Base):
     porcentaje_avance = Column(Float)
     observaciones = Column(String, nullable=True)
     rutas_fotografias = Column(String, nullable=True) # JSON o URL separados por comas
+    tipo_periodo = Column(String, default="SEMANA", server_default="SEMANA", nullable=False)
 
     proyecto = relationship("Proyecto", back_populates="avances")
+

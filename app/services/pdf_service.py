@@ -51,7 +51,9 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(40, 8, 'Semana Registrada:', border=1)
     pdf.set_font('Arial', '', 10)
-    pdf.cell(60, 8, f' Nro {avance.semana}', border=1)
+    tipo = getattr(avance, 'tipo_periodo', 'SEMANA')
+    label = 'Nro Dia' if tipo == 'DIA' else 'Nro Semana'
+    pdf.cell(60, 8, f' {label} {avance.semana}', border=1)
     
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(40, 8, 'Avance Fisico:', border=1)
