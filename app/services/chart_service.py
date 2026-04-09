@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg') # backend obligatorio para entornos multi-hilo como FastAPI sin interfaz de ventana (soluciona crash de tkinter)
 import matplotlib.pyplot as plt
 import numpy as np
 import os

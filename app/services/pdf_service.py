@@ -189,11 +189,40 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
         pdf.multi_cell(0, 6, f"(Error generando Anexo Estadistico: {e})")
         pdf.set_text_color(0, 0, 0)
         
-    pdf.ln(10)
+    pdf.ln(5)
+    tipo_duracion_str = "Días" if getattr(proyecto, 'tipo_duracion', 'SEMANAS') == "DIAS" else "Semanas"
+    porcentaje_actual = avance.porcentaje_avance
+    porcentaje_faltante = max(0, 100.0 - porcentaje_actual)
+
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_text_color(0, 51, 102)
+    pdf.cell(0, 8, "RESUMEN ESTRATEGICO DE PROGRESO DE OBRA", ln=True)
+    pdf.set_text_color(0, 0, 0)
+    
+    # Dibujar Tabla de Progreso
+    pdf.set_font('Arial', 'B', 9)
+    pdf.set_fill_color(220, 230, 241)
+    pdf.cell(140, 8, ' Indicador de Gestion Física', border=1, fill=True)
+    pdf.cell(50, 8, ' Valor Reportado', align='C', border=1, fill=True, ln=True)
+    
     pdf.set_font('Arial', '', 9)
+    pdf.cell(140, 7, ' Progreso Fisico Total Acumulado (Ejecutado)', border=1)
+    pdf.cell(50, 7, f' {porcentaje_actual}%', align='C', border=1, ln=True)
+    
+    pdf.cell(140, 7, ' Saldo Pendiente por Ejecutar (Brecha)', border=1)
+    pdf.cell(50, 7, f' {porcentaje_faltante}%', align='C', border=1, ln=True)
+    
+    pdf.cell(140, 7, ' Cronograma Total General Programado', border=1)
+    pdf.cell(50, 7, f' {proyecto.semanas_estimadas} {tipo_duracion_str}', align='C', border=1, ln=True)
+    
+    if getattr(avance, 'dias_trabajados', 0) > 0:
+        pdf.cell(140, 7, ' Fuerza Laboral Invertida en este Periodo', border=1)
+        pdf.cell(50, 7, f' {avance.dias_trabajados} dias netos', align='C', border=1, ln=True)
+        
+    pdf.ln(3)
+    pdf.set_font('Arial', 'I', 8)
     pdf.set_text_color(100, 100, 100)
-    pdf.multi_cell(0, 5, f"(*) La Curva Logística S (Programada) es calculada asumiendo un avance de forma "
-                         f"Normal y Logistica asintotica durante las {proyecto.semanas_estimadas} Semanas pronosticadas de ejecucion general.")
+    pdf.multi_cell(0, 5, f"(*) La Curva Logistica S programada es proyectada matematicamente asumiendo las {proyecto.semanas_estimadas} {tipo_duracion_str} estimadas según la base inicial.")
                          
     # ------------------ PÁGINA 3: ANEXO DE COSTOS FIJOS ---------------- #
     if proyecto.mano_de_obra:
