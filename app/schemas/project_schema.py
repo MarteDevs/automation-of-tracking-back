@@ -20,14 +20,20 @@ class ProyectoUpdate(BaseModel):
 
 class ManoObraBase(BaseModel):
     descripcion: str
+    categoria: Optional[str] = "Mano de Obra"
+    unidad: Optional[str] = ""
     cantidad_trabajadores: float
     precio_unitario: float
+    dias: Optional[float] = 1.0
     total: float
 
 class MaterialEquipoBase(BaseModel):
     descripcion: str
+    categoria: Optional[str] = "Materiales"
     cantidad: float
     unidad: str
+    precio_unitario: Optional[float] = 0.0
+    dias: Optional[float] = 1.0
     total: float
 
 class AvanceSemanalBase(BaseModel):

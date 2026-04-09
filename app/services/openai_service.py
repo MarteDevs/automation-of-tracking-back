@@ -23,16 +23,21 @@ def analizar_presupuesto_pdf(ruta_archivo_pdf):
                     texto_pdf += text + "\n"
         
         instrucciones = """
-        Eres un asistente experto en costos de proyectos metalmecánicos y soldadura.
-        Analiza el texto provisto y extrae la información en un formato JSON estricto.
+        Eres un analista financiero experto en presupuestos metalmecánicos y soldadura.
+        Analiza el texto provisto y centraliza la información en un formato JSON estricto.
         No agregues saludos, explicaciones ni formato Markdown (```json). Devuelve SOLO el JSON puro.
         
         REGLAS CRÍTICAS PARA LA EXTRACCIÓN:
-        1. Para el "nombre_proyecto", busca la descripción exacta del servicio o fabricación. Este nombre suele estar ubicado directamente **debajo de los subtítulos "TRABAJOS REALIZADOS"**.
-        2. NO asignes el nombre de la Unidad Minera o nombres muy grandes (ejemplo: "SOLEDAD", "ESPERANZA") como el nombre del proyecto.
-        3. Ignora estados del Excel como "FALTA GUARDAR", no deben ir en el titulo.
+        1. Para el "nombre_proyecto", busca debajo de los subtítulos "TRABAJOS REALIZADOS" (Ej: "AGUZADO CHOTANAS").
+        2. NO asignes el nombre de la Unidad Minera ("ESPERANZA") ni "FALTA GUARDAR" a los proyectos.
+        3. El Presupuesto se divide en COSTOS FIJOS (del 1 al 5) y COSTOS VARIABLES (del 6 al 11).
+        4. Agrupa en `mano_de_obra` (que es el contenedor de Costos Fijos) TODO lo correspondiente a: "MANO DE OBRA", "LOCAL", "VIGILANCIA", "ENERGIA", "HERRAMIENTAS Y/O VARIOS OTROS SERVICIOS (FIJO)".
+        5. Agrupa en `materiales_y_equipos` (que es el contenedor de Costos Variables) TODO lo correspondiente a: "MATERIALES", "IMPLEMENTOS DE SEGURIDAD", "PETROLEO", "GASOLINA", "TOPICO", "EQUIPOS Y/OTROS SERCICIOS (VARIABLE)".
+        6. En cada item, asegúrate de recuperar correctamente la unidad de medida (Ej: Tarea, %, M2), su cantidad (Ej: CANT.TRAB o CANT.), su Precio Unitario (P.U o PRECIO) y los días laborados (DIAS). P.U puede ser cero si así está en texto.
+        7. El total de cada fila debe ser CANT * P.U * DIAS.
+        8. Etiqueta el campo `categoria` indicando EXACTAMENTE el título de la rúbrica o sección numerada a la que pertenece (Ej: "MANO DE OBRA", "LOCAL", "VIGILANCIA", "ENERGIA", "HERRAMIENTAS", "MATERIALES", "IMPLEMENTOS DE SEGURIDAD", "PETROLEO", "EQUIPOS"). ¡JAMÁS ASIGNES el cargo o nombre de una sub-tarea ("Maestro soldador", "torno") como categoría! Por ejemplo, todos los trabajadores e ingenieros deben tener la categoría "MANO DE OBRA".
         
-        Usa esta estructura exacta:
+        Usa esta estructura exacta (DEBES INCLUIR LAS LLAVES `mano_de_obra` y `materiales_y_equipos` para la compatibilidad del sistema, aunque internamente guarden Costos Fijos y Costos Variables respectivamente):
         {
             "proyecto_info": {
                 "nombre_proyecto": "",
@@ -41,10 +46,10 @@ def analizar_presupuesto_pdf(ruta_archivo_pdf):
                 "utilidad_porcentaje": 0.0
             },
             "mano_de_obra": [
-                {"descripcion": "", "cantidad_trabajadores": 0, "precio_unitario": 0.0, "total": 0.0}
+                {"categoria": "Local", "descripcion": "Alquiler...", "unidad": "M2", "cantidad_trabajadores": 0, "precio_unitario": 0.0, "dias": 0.0, "total": 0.0}
             ],
             "materiales_y_equipos": [
-                {"descripcion": "", "cantidad": 0, "unidad": "", "total": 0.0}
+                {"categoria": "Materiales", "descripcion": "Acero...", "unidad": "Kg", "cantidad": 0, "precio_unitario": 0.0, "dias": 0.0, "total": 0.0}
             ]
         }
         """

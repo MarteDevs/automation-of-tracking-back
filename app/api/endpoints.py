@@ -120,24 +120,30 @@ async def procesar_presupuesto(request: Request, file: UploadFile = File(...), d
         db.add(nuevo_proyecto)
         db.flush() # Importante: Obtenemos el ID generado del proyecto (nuevo_proyecto.id)
 
-        # 5.2 Guardar registros de Mano de Obra
+        # 5.2 Guardar registros de Mano de Obra (Costos Fijos)
         for mo in datos_validados.mano_de_obra:
             nueva_mo = models.ManoObra(
                 proyecto_id=nuevo_proyecto.id,
+                categoria=mo.categoria,
                 descripcion=mo.descripcion,
+                unidad=mo.unidad,
                 cantidad_trabajadores=mo.cantidad_trabajadores,
                 precio_unitario=mo.precio_unitario,
+                dias=mo.dias,
                 total=mo.total
             )
             db.add(nueva_mo)
 
-        # 5.3 Guardar registros de Materiales y Equipos
+        # 5.3 Guardar registros de Materiales y Equipos (Costos Variables)
         for mat in datos_validados.materiales_y_equipos:
             nuevo_mat = models.MaterialEquipo(
                 proyecto_id=nuevo_proyecto.id,
+                categoria=mat.categoria,
                 descripcion=mat.descripcion,
                 cantidad=mat.cantidad,
                 unidad=mat.unidad,
+                precio_unitario=mat.precio_unitario,
+                dias=mat.dias,
                 total=mat.total
             )
             db.add(nuevo_mat)

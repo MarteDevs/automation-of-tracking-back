@@ -57,7 +57,24 @@ def run_migrations():
                     "ALTER TABLE avances_semanales ADD COLUMN dias_trabajados REAL DEFAULT 0"
                 ))
                 print("✔ Migración aplicada: columna dias_trabajados añadida.")
+                
+            # Migraciones para Costos Fijos (Mano Obra) y Variables (Materiales)
+            res_mo = conn.execute(text("PRAGMA table_info(mano_de_obra)"))
+            cols_mo = [row[1] for row in res_mo.fetchall()]
+            if "categoria" not in cols_mo:
+                conn.execute(text("ALTER TABLE mano_de_obra ADD COLUMN categoria VARCHAR DEFAULT 'Mano de Obra'"))
+                conn.execute(text("ALTER TABLE mano_de_obra ADD COLUMN unidad VARCHAR DEFAULT ''"))
+                conn.execute(text("ALTER TABLE mano_de_obra ADD COLUMN dias REAL DEFAULT 1.0"))
+                print("✔ Migración aplicada: columnas extendidas en mano_de_obra.")
             
+            res_mat = conn.execute(text("PRAGMA table_info(materiales_equipos)"))
+            cols_mat = [row[1] for row in res_mat.fetchall()]
+            if "categoria" not in cols_mat:
+                conn.execute(text("ALTER TABLE materiales_equipos ADD COLUMN categoria VARCHAR DEFAULT 'Materiales'"))
+                conn.execute(text("ALTER TABLE materiales_equipos ADD COLUMN precio_unitario REAL DEFAULT 0.0"))
+                conn.execute(text("ALTER TABLE materiales_equipos ADD COLUMN dias REAL DEFAULT 1.0"))
+                print("✔ Migración aplicada: columnas extendidas en materiales_equipos.")
+            conn.commit()
             if any(col not in columns for col in ["tipo_periodo", "fecha_fin", "dias_trabajados"]):
                 conn.commit()
             else:
