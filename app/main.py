@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+
 from app.api import endpoints
 from app.models.database import engine
 from app.models import models
@@ -9,10 +12,14 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="API Control de Proyectos - Soldadura")
 
-# Configuración extendida de CORS
+load_dotenv()
+# Lee los dominios directamente desde el .env y genera Lista nativa.
+origenes = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+
+# Configuración extendida de CORS (Extraccion Segura Env)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], # Frontend URLs
+    allow_origins=origenes,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -10,8 +10,26 @@ from app.models.database import get_db
 from app.models import models
 from app.schemas import project_schema
 from fastapi.responses import FileResponse
+from fastapi import Request
+from collections import defaultdict
+import time
 
 router = APIRouter()
+
+# Anti-Spam: Memoria Volátil para proteger la billetera de OpenAI (Rate Limiting rudimentario)
+ip_ratios = defaultdict(list)
+
+def check_rate_limit(request: Request):
+    ip = request.client.host
+    now = time.time()
+    # Limpiamos el historial viejo (retenemos registros de los últimos 60 segundos)
+    ip_ratios[ip] = [t for t in ip_ratios[ip] if now - t < 60]
+    
+    # Límite Max: 4 PDFs por minuto por persona.
+    if len(ip_ratios[ip]) >= 4:
+        raise HTTPException(status_code=429, detail="Demasiadas solicitudes en muy poco tiempo. El firewall Anti-Spam entró en acción. Espere 1 minuto...")
+    
+    ip_ratios[ip].append(now)
 
 @router.put("/api/v1/proyectos/{proyecto_id}/configuracion", response_model=project_schema.ProyectoResponse)
 def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.ProyectoUpdate, db: Session = Depends(get_db)):
@@ -24,8 +42,8 @@ def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.P
     db.refresh(proyecto)
     return proyecto
 
-@router.post("/api/v1/procesar-presupuesto/", response_model=project_schema.ProyectoResponse)
-async def procesar_presupuesto(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@router.post("/api/v1/procesar-presupuesto/", response_model=project_schema.ProyectoResponse, dependencies=[Depends(check_rate_limit)])
+async def procesar_presupuesto(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="El archivo debe ser un PDF")
 
