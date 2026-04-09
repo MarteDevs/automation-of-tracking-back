@@ -88,11 +88,25 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     
     if avance.rutas_fotografias:
         foto_safe = avance.rutas_fotografias.encode('latin-1', 'replace').decode('latin-1')
-        pdf.multi_cell(0, 6, f"Se han adjuntado recursos referenciales.\nRuta de Evidencias: {foto_safe}")
+        pdf.multi_cell(0, 6, f"Se ha adjuntado una fotografía en este reporte.")
+        pdf.ln(5)
+        # Calcular path fisico nativo
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        img_path = os.path.join(base_dir, foto_safe.replace('/', os.sep))
+        if os.path.exists(img_path):
+            try:
+                # Pegar la imagen ajustando su ancho a 150 para que no desborde la pagina
+                pdf.image(img_path, x=30, w=150)
+            except Exception as e:
+                pdf.set_text_color(255, 0, 0)
+                pdf.multi_cell(0, 6, f"(Error al acoplar la imagen: Imagen en formato avanzado u orientacion incompatible)")
+                pdf.set_text_color(0, 0, 0)
+        else:
+            pdf.multi_cell(0, 6, "(Imagen no localizada temporalmente en el disco del servidor)")
     else:
         pdf.multi_cell(0, 6, "(No se insertaron imagenes fotograficas para esta semana).")
         
-    pdf.ln(30)
+    pdf.ln(15)
     
     # Firmas
     pdf.set_font('Arial', 'B', 10)

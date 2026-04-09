@@ -155,4 +155,23 @@ def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depend
         media_type="application/pdf"
     )
 
+@router.post("/api/v1/upload-imagen/")
+async def upload_imagen(file: UploadFile = File(...)):
+    ext = file.filename.split('.')[-1].lower()
+    if ext not in ['jpg', 'jpeg', 'png']:
+        raise HTTPException(status_code=400, detail="El archivo debe ser de formato gráfico (JPG/PNG)")
+    
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    save_path = os.path.join(base_dir, "uploads", "evidencias", filename)
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    
+    try:
+        with open(save_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar: {e}")
+        
+    return {"ruta_fotografias": f"uploads/evidencias/{filename}"}
+
 
