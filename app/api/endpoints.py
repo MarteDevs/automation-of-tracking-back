@@ -260,4 +260,22 @@ async def upload_imagen(files: List[UploadFile] = File(...)):
         
     return {"ruta_fotografias": ",".join(rutas)}
 
+@router.delete("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}", dependencies=[Depends(get_current_user)])
+def eliminar_avance_semanal(proyecto_id: int, avance_id: int, db: Session = Depends(get_db)):
+    avance = db.query(models.AvanceSemanal).filter(
+        models.AvanceSemanal.id == avance_id, 
+        models.AvanceSemanal.proyecto_id == proyecto_id
+    ).first()
+    
+    if not avance:
+        raise HTTPException(status_code=404, detail="El registro de seguimiento solicitado no existe.")
+
+    try:
+        db.delete(avance)
+        db.commit()
+        return {"mensaje": "Seguimiento eliminado correctamente"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al intentar eliminar el registro: {str(e)}")
+
 
