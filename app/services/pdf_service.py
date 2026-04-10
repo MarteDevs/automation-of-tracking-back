@@ -47,13 +47,30 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     
     # Información del Avance
     pdf.set_font('Arial', 'B', 11)
-    pdf.cell(0, 8, ' 2. SEGUIMIENTO SEMANAL', border=1, ln=True, fill=True)
+    tipo = getattr(avance, 'tipo_periodo', 'SEMANA')
+    
+    if tipo == 'HORA':
+        titulo_sec = ' 2. SEGUIMIENTO POR HORAS'
+        label_nro = 'Hora Registrada:'
+    elif tipo == 'DIA':
+        titulo_sec = ' 2. SEGUIMIENTO DIARIO'
+        label_nro = 'Dia Registrado:'
+    else:
+        titulo_sec = ' 2. SEGUIMIENTO SEMANAL'
+        label_nro = 'Semana Registrada:'
+        
+    pdf.cell(0, 8, titulo_sec, border=1, ln=True, fill=True)
     
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(40, 8, 'Semana Registrada:', border=1)
+    pdf.cell(40, 8, label_nro, border=1)
     pdf.set_font('Arial', '', 10)
     tipo = getattr(avance, 'tipo_periodo', 'SEMANA')
-    label = 'Nro Dia' if tipo == 'DIA' else 'Nro Semana'
+    if tipo == 'HORA':
+        label = 'Hora Reportada'
+    elif tipo == 'DIA':
+        label = 'Nro Dia'
+    else:
+        label = 'Nro Semana'
     pdf.cell(60, 8, f' {label} {avance.semana}', border=1)
     
     pdf.set_font('Arial', 'B', 10)
@@ -70,12 +87,14 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     pdf.cell(60, 8, f' {fecha_val if fecha_val else "No Registrada"}', border=1)
     
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(40, 8, 'Dias Trabajados:', border=1)
+    label_trabajo = 'Horas Trabajadas:' if tipo == 'HORA' else 'Dias Trabajados:'
+    pdf.cell(40, 8, label_trabajo, border=1)
     pdf.set_font('Arial', '', 10)
     
     dias_val = getattr(avance, 'dias_trabajados', 0)
     dias_text = str(dias_val) if dias_val is not None else '0'
-    pdf.cell(0, 8, f' {dias_text}', border=1, ln=True)
+    unidad_text = ' horas' if tipo == 'HORA' else ''
+    pdf.cell(0, 8, f' {dias_text}{unidad_text}', border=1, ln=True)
     
     pdf.ln(7)
     
@@ -221,7 +240,8 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     
     if getattr(avance, 'dias_trabajados', 0) > 0:
         pdf.cell(140, 7, ' Fuerza Laboral Invertida en este Periodo', border=1)
-        pdf.cell(50, 7, f' {avance.dias_trabajados} dias netos', align='C', border=1, ln=True)
+        unidad_label = 'horas registradas' if tipo == 'HORA' else 'dias netos'
+        pdf.cell(50, 7, f' {avance.dias_trabajados} {unidad_label}', align='C', border=1, ln=True)
         
     pdf.ln(3)
     pdf.set_font('Arial', 'I', 8)
@@ -459,7 +479,13 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         pdf.add_page()
         pdf.set_text_color(0, 51, 102)
         pdf.set_font('Arial', 'B', 12)
-        semana_label_vi = f'Semana {avance.semana}' if getattr(avance, 'tipo_periodo', 'SEMANA') == 'SEMANA' else f'Dia {avance.semana}'
+        tipo_vi = getattr(avance, 'tipo_periodo', 'SEMANA')
+        if tipo_vi == 'HORA':
+            semana_label_vi = f'Hora {avance.semana}'
+        elif tipo_vi == 'DIA':
+            semana_label_vi = f'Dia {avance.semana}'
+        else:
+            semana_label_vi = f'Semana {avance.semana}'
         pdf.cell(0, 10, f'ANEXO VI: MATERIALES ACUMULADOS HASTA {semana_label_vi.upper()}', ln=True, align='C')
         pdf.set_text_color(0, 0, 0)
         pdf.ln(5)
