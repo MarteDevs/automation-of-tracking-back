@@ -31,7 +31,7 @@ def analizar_presupuesto_pdf(ruta_archivo_pdf):
         1. Para el "nombre_proyecto", busca debajo de los subtítulos "TRABAJOS REALIZADOS" (Ej: "AGUZADO CHOTANAS").
         2. NO asignes el nombre de la Unidad Minera ("ESPERANZA") ni "FALTA GUARDAR" a los proyectos.
         3. El Presupuesto se divide en COSTOS FIJOS (del 1 al 5) y COSTOS VARIABLES (del 6 al 11).
-        4. Agrupa en `mano_de_obra` (que es el contenedor de Costos Fijos) TODO lo correspondiente a: "MANO DE OBRA", "LOCAL", "VIGILANCIA", "ENERGIA", "HERRAMIENTAS Y/O VARIOS OTROS SERVICIOS (FIJO)".
+        4. Agrupa en `mano_de_obra` (que es el contenedor de Costos Fijos) TODO lo correspondiente a: "MANO DE OBRA", "LOCAL", "VIGILANCIA", "ENERGIA", "HERRAMIENTAS Y/O VARIOS OTROS SERVICIOS (FIJO)". ¡REGLA CRÍTICA PARA MANO DE OBRA!: Para la sección inicial de mano de obra laboral, NO extraigas a los trabajadores ni leyes de detalle (ej. "Maestro soldador"). EXTRAE ÚNICAMENTE la fila resumen consolidada llamada "TOTAL MANO DE OBRA" (ej. 362.00) creando un solo ítem con cantidad_trabajadores=1, dias=1 y P.U. igual a ese gran total consolidado. Las demás secciones adicionales (Local, Vigilancia, etc.) extráelas de forma normal.
         5. Agrupa en `materiales_y_equipos` (que es el contenedor de Costos Variables) TODO lo correspondiente a: "MATERIALES", "IMPLEMENTOS DE SEGURIDAD", "PETROLEO", "GASOLINA", "TOPICO", "EQUIPOS Y/OTROS SERCICIOS (VARIABLE)".
         6. En cada item, asegúrate de recuperar correctamente la unidad de medida (Ej: Tarea, %, M2), su cantidad (Ej: CANT.TRAB o CANT.), su Precio Unitario (P.U o PRECIO) y los días laborados (DIAS). P.U puede ser cero si así está en texto.
         7. El total de cada fila debe ser CANT * P.U * DIAS.
