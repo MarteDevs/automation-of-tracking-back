@@ -342,9 +342,8 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     costo_mo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', []))
     costo_mat = sum(mat.total for mat in getattr(proyecto, 'materiales', []))
     costo_directo = costo_mo + costo_mat
-    
-    # Porcentajes forzados a 15% y 5% por regla de negocio para igualar la plantilla Excel original
-    utilidad_porc = 0.15
+    # Porcentajes forzados a 10% utilidad y 5% otros (15% total) por regla de negocio
+    utilidad_porc = 0.10
     otros_porc = 0.05
     
     utilidad_moneda = costo_directo * utilidad_porc
