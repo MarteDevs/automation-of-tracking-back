@@ -244,7 +244,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
             pdf.set_font('Arial', 'B', 9)
             pdf.set_fill_color(0, 51, 102)
             pdf.set_text_color(255, 255, 255)
-            pdf.cell(190, 8, f'  CATEGORIA: {cat}', border=1, fill=True, ln=True)
+            pdf.cell(190, 8, f'  {cat}', border=1, fill=True, ln=True)
             
             pdf.set_text_color(0, 0, 0)
             pdf.set_font('Arial', 'B', 8)
@@ -295,7 +295,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
             pdf.set_font('Arial', 'B', 9)
             pdf.set_fill_color(0, 51, 102)
             pdf.set_text_color(255, 255, 255)
-            pdf.cell(190, 8, f'  CATEGORIA: {cat}', border=1, fill=True, ln=True)
+            pdf.cell(190, 8, f'  {cat}', border=1, fill=True, ln=True)
             
             pdf.set_text_color(0, 0, 0)
             pdf.set_font('Arial', 'B', 8)
