@@ -245,6 +245,28 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = 
         media_type="application/pdf"
     )
 
+@router.get("/api/v1/proyectos/{proyecto_id}/balance-pdf", dependencies=[Depends(get_current_user)])
+async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db)):
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
+    
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    from app.services.pdf_service import crear_pdf_balance_general
+    import re
+    # Dibujamos el PDF global
+    pdf_path = crear_pdf_balance_general(proyecto)
+    
+    # Sanitizar
+    nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_")
+    
+    import starlette.background
+    return FileResponse(
+        path=pdf_path, 
+        filename=f"Balance_Global_{nom_limpio}.pdf",
+        media_type="application/pdf"
+    )
+
 @router.post("/api/v1/upload-imagen/", dependencies=[Depends(get_current_user)])
 async def upload_imagen(files: List[UploadFile] = File(...)):
     rutas = []
