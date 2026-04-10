@@ -4,7 +4,7 @@ import os
 from collections import defaultdict
 from app.services.chart_service import generar_curva_s
 
-def crear_pdf_avance(proyecto, avance, texto_ai):
+def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total_igv=0.0):
     pdf = FPDF()
     pdf.add_page()
     
@@ -434,6 +434,89 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
         pdf.cell(40, 7, f' S/ {total_gastado:,.2f}', align='R', border=1, fill=True, ln=True)
         pdf.set_text_color(0, 0, 0) # Restaurar color
 
+    # ------------------ ANEXO VI: RESUMEN ACUMULADO DE MATERIALES ---------------- #
+    materiales_lista_vi = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
+
+    if materiales_lista_vi:
+        pdf.add_page()
+        pdf.set_text_color(0, 51, 102)
+        pdf.set_font('Arial', 'B', 12)
+        semana_label_vi = f'Semana {avance.semana}' if getattr(avance, 'tipo_periodo', 'SEMANA') == 'SEMANA' else f'Dia {avance.semana}'
+        pdf.cell(0, 10, f'ANEXO VI: MATERIALES ACUMULADOS HASTA {semana_label_vi.upper()}', ln=True, align='C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(6)
+
+        consumos_vi = {}
+        for av in getattr(proyecto, 'avances', []):
+            for c in getattr(av, 'consumos', []):
+                consumos_vi[c.nombre_material] = consumos_vi.get(c.nombre_material, 0.0) + c.cantidad_usada
+
+        pdf.set_font('Arial', 'B', 8)
+        pdf.set_fill_color(220, 230, 241)
+        pdf.cell(75, 7, ' Insumo / Material', border=1, fill=True)
+        pdf.cell(20, 7, ' Pedido', align='C', border=1, fill=True)
+        pdf.cell(20, 7, ' Usado', align='C', border=1, fill=True)
+        pdf.cell(20, 7, ' Saldo', align='C', border=1, fill=True)
+        pdf.cell(55, 7, ' Saldo S/', align='R', border=1, fill=True, ln=True)
+
+        # --- Agrupar presupuesto por nombre de material ---
+        materiales_agrupados = {}
+        for mat in materiales_lista_vi:
+            nombre = mat.descripcion
+            if nombre not in materiales_agrupados:
+                materiales_agrupados[nombre] = {
+                    'cantidad': 0.0,
+                    'precio': getattr(mat, 'precio_unitario', 0) or 0.0,
+                    'unidad': mat.unidad or ''
+                }
+            materiales_agrupados[nombre]['cantidad'] += getattr(mat, 'cantidad', 0) or 0.0
+
+        pdf.set_font('Arial', '', 7)
+        total_ppto_vi = 0.0
+        total_gast_vi = 0.0
+
+        for nombre, data in materiales_agrupados.items():
+            desc_safe = nombre.encode('latin-1', 'replace').decode('latin-1')
+            if len(desc_safe) > 44: desc_safe = desc_safe[:41] + '...'
+            
+            cant_pedida = data['cantidad']
+            precio_unit = data['precio']
+            cant_usada  = consumos_vi.get(nombre, 0.0)
+            
+            saldo_cant  = cant_pedida - cant_usada
+            costo_ppto  = cant_pedida * precio_unit
+            costo_gast  = cant_usada * precio_unit
+            saldo_mon   = costo_ppto - costo_gast
+            
+            total_ppto_vi += costo_ppto
+            total_gast_vi += costo_gast
+
+            if cant_usada == 0:
+                pdf.set_text_color(140, 140, 140)
+            elif saldo_mon < 0:
+                pdf.set_text_color(200, 0, 0)
+            else:
+                pdf.set_text_color(0, 0, 0)
+
+            pdf.cell(75, 6, f' {desc_safe}', border=1)
+            pdf.cell(20, 6, f' {cant_pedida:g}', align='C', border=1)
+            txt_usado = f' {cant_usada:g}' if cant_usada > 0 else ' No Usado'
+            pdf.cell(20, 6, txt_usado, align='C', border=1)
+            pdf.cell(20, 6, f' {saldo_cant:g}', align='C', border=1)
+            pdf.cell(55, 6, f' S/ {saldo_mon:,.2f}', align='R', border=1, ln=True)
+
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font('Arial', 'B', 8)
+        pdf.set_fill_color(245, 245, 245)
+        saldo_total_vi = total_ppto_vi - total_gast_vi
+        pdf.cell(135, 7, ' SALDO TOTAL DISPONIBLE EN MATERIALES:', align='R', border=1, fill=True)
+        if saldo_total_vi >= 0:
+            pdf.set_text_color(0, 102, 51)
+        else:
+            pdf.set_text_color(200, 0, 0)
+        pdf.cell(55, 7, f' S/ {saldo_total_vi:,.2f}', align='R', border=1, fill=True, ln=True)
+        pdf.set_text_color(0, 0, 0)
+
     pdf.ln(25)
     
     # Firmas
@@ -450,7 +533,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.output(temp_path)
     return temp_path
 
-def crear_pdf_balance_general(proyecto) -> str:
+def crear_pdf_balance_general(proyecto, texto_ia='', ppto_total_igv=0.0) -> str:
     from fpdf import FPDF
     import tempfile
     import os
@@ -462,104 +545,193 @@ def crear_pdf_balance_general(proyecto) -> str:
     # ------------------ ENCABEZADO ---------------- #
     pdf.set_fill_color(0, 51, 102)
     pdf.rect(0, 0, 210, 20, 'F')
-    
     pdf.set_font('Arial', 'B', 14)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_xy(10, 6)
-    pdf.cell(0, 8, 'REPORTE GLOBAL: BALANCE DE MATERIALES ACUMULADO', ln=True, align='C')
+    pdf.set_xy(10, 5)
+    pdf.cell(0, 10, 'REPORTE GLOBAL: BALANCE ACUMULADO DE MATERIALES', ln=True, align='C')
     
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('Arial', 'B', 11)
     pdf.ln(15)
-    pdf.cell(0, 8, f'Proyecto: {proyecto.nombre_proyecto}', ln=True)
-    pdf.set_font('Arial', '', 10)
-    pdf.cell(0, 6, f'Fecha de Emision: {datetime.now().strftime("%Y-%m-%d %H:%M")}', ln=True)
-    pdf.ln(10)
+    nom_safe = proyecto.nombre_proyecto.encode('latin-1', 'replace').decode('latin-1')
+    pdf.cell(0, 8, f'Proyecto: {nom_safe}', ln=True)
+    pdf.set_font('Arial', '', 9)
+    pdf.cell(0, 5, f'Fecha de Emision: {datetime.now().strftime("%d/%m/%Y %H:%M")}', ln=True)
+    pdf.ln(8)
 
-    # ------------------ CÁLCULO DE CONSUMOS GLOBALES ---------------- #
+    # --- Calcular consumos globales (evitar doble conteo en totales) ---
     consumos_historicos = {}
-    if hasattr(proyecto, 'avances'):
-        for av in proyecto.avances:
-            if hasattr(av, 'consumos') and av.consumos:
-                for c in av.consumos:
-                    if c.nombre_material not in consumos_historicos:
-                        consumos_historicos[c.nombre_material] = 0.0
-                    consumos_historicos[c.nombre_material] += c.cantidad_usada
+    for av in getattr(proyecto, 'avances', []):
+        for c in getattr(av, 'consumos', []):
+            consumos_historicos[c.nombre_material] = consumos_historicos.get(c.nombre_material, 0.0) + c.cantidad_usada
 
-    # ------------------ TABLA DE MATERIALES ---------------- #
-    pdf.set_font('Arial', 'B', 8)
-    pdf.set_fill_color(220, 230, 241)
-    # Total ancho: 190. (Desc 70, P 15, U 15, Saldo 15, Costo P 25, Costo G 25, Saldo P 25)
-    pdf.cell(70, 8, ' Insumo / Material', border=1, fill=True)
-    pdf.cell(15, 8, ' Pedido', align='C', border=1, fill=True)
-    pdf.cell(15, 8, ' Usado', align='C', border=1, fill=True)
-    pdf.cell(15, 8, ' Saldo', align='C', border=1, fill=True)
-    pdf.cell(25, 8, ' P.T. S/', align='R', border=1, fill=True)
-    pdf.cell(25, 8, ' Gastado S/', align='R', border=1, fill=True)
-    pdf.cell(25, 8, ' Saldo S/', align='R', border=1, fill=True, ln=True)
-
-    pdf.set_font('Arial', '', 7)
-    
-    total_presupuesto_mat = 0.0
-    total_gastado_mat = 0.0
-    
-    # Filtrar todos los materiales (o solo la categoria "MATERIALES" si quisieran, pero asumiremos todo "Materiales")
     materiales_lista = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
-    
-    for mat in materiales_lista:
-        desc_safe = mat.descripcion.encode('latin-1', 'replace').decode('latin-1')
-        if len(desc_safe) > 42: desc_safe = desc_safe[:39] + "..."
-        
-        cant_pedida = getattr(mat, 'cantidad', 0) or 0.0
-        precio_unit = getattr(mat, 'precio_unitario', 0) or 0.0
-        cant_usada = consumos_historicos.get(mat.descripcion, 0.0)
-        
-        # Matemáticas
-        saldo_cant = cant_pedida - cant_usada
-        costo_presupuestado = cant_pedida * precio_unit
-        costo_gastado = cant_usada * precio_unit
-        saldo_monetario = costo_presupuestado - costo_gastado
-        
-        total_presupuesto_mat += costo_presupuestado
-        total_gastado_mat += costo_gastado
-        
-        # Color rojo si el saldo monetario es negativo, sino negro. (También verde si usado == 0)
-        if cant_usada == 0:
-            pdf.set_text_color(128, 128, 128) # Gris para no usados
-        elif saldo_cant < 0:
-            pdf.set_text_color(200, 0, 0) # Rojo para sobregiro
-        else:
-            pdf.set_text_color(0, 0, 0) # Negro regular
-            
-        pdf.cell(70, 7, f' {desc_safe}', border=1)
-        pdf.cell(15, 7, f' {cant_pedida:g}', align='C', border=1)
-        
-        text_usado = f' {cant_usada:g}' if cant_usada > 0 else ' No Usado'
-        pdf.cell(15, 7, text_usado, align='C', border=1)
-        
-        pdf.cell(15, 7, f' {saldo_cant:g}', align='C', border=1)
-        pdf.cell(25, 7, f' {costo_presupuestado:,.2f}', align='R', border=1)
-        pdf.cell(25, 7, f' {costo_gastado:,.2f}', align='R', border=1)
-        pdf.cell(25, 7, f' {saldo_monetario:,.2f}', align='R', border=1, ln=True)
-        
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', 'B', 8)
+
+    # Mapear precio unico por nombre (primer match) para calcular el gasto real sin duplicados
+    precios_unicos = {}
+    for m in materiales_lista:
+        if m.descripcion not in precios_unicos:
+            precios_unicos[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
+
+    total_ppto = sum((m.cantidad or 0) * (m.precio_unitario or 0) for m in materiales_lista)
+    total_gast = sum(precios_unicos.get(nom, 0) * cant for nom, cant in consumos_historicos.items())
+
+    saldo_global = total_ppto - total_gast
+    ppto_igv = ppto_total_igv if ppto_total_igv > 0 else total_ppto * 1.18
+
+    # ======== SECCION 1: RESUMEN COMPARATIVO ========
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_fill_color(220, 230, 241)
+    pdf.cell(0, 8, ' RESUMEN FINANCIERO COMPARATIVO', border=1, fill=True, ln=True)
+    pdf.set_font('Arial', '', 9)
+    filas = [
+        ('Presupuesto Total del Proyecto (con IGV)', f'S/ {ppto_igv:,.2f}'),
+        ('Presupuesto de MATERIALES del Proyecto', f'S/ {total_ppto:,.2f}'),
+        ('Total Gastado en Materiales (acumulado)', f'S/ {total_gast:,.2f}'),
+    ]
+    for label, valor in filas:
+        pdf.set_fill_color(250, 250, 250)
+        pdf.cell(130, 7, f'  {label}', border=1, fill=True)
+        pdf.cell(60, 7, f'  {valor}', border=1, fill=True, align='R', ln=True)
+
+    pdf.set_font('Arial', 'B', 9)
     pdf.set_fill_color(245, 245, 245)
-    
-    total_saldo_global = total_presupuesto_mat - total_gastado_mat
-    pdf.cell(115, 8, ' BALANCE GLOBAL ACUMULADO (SOLO MATERIALES):  ', align='R', border=1, fill=True)
-    pdf.cell(25, 8, f' S/ {total_presupuesto_mat:,.2f}', align='R', border=1, fill=True)
-    pdf.cell(25, 8, f' S/ {total_gastado_mat:,.2f}', align='R', border=1, fill=True)
-    
-    if total_saldo_global < 0:
-        pdf.set_text_color(200, 0, 0)
-    else:
+    pdf.cell(130, 8, '  SALDO DISPONIBLE EN MATERIALES', border=1, fill=True)
+    if saldo_global >= 0:
         pdf.set_text_color(0, 102, 51)
+        saldo_txt = f'  S/ {saldo_global:,.2f}  (AHORRO)'
+    else:
+        pdf.set_text_color(200, 0, 0)
+        saldo_txt = f'  S/ {saldo_global:,.2f}  (EXCESO)'
+    pdf.cell(60, 8, saldo_txt, border=1, fill=True, align='R', ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(8)
+
+    # ======== SECCION 2: GRAFICO DE BARRAS ========
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_fill_color(220, 230, 241)
+    pdf.cell(0, 8, ' GRAFICO COMPARATIVO: PRESUPUESTO vs GASTADO', border=1, fill=True, ln=True)
+    pdf.ln(4)
+
+    bar_max_w = 140
+    bar_h = 10
+    bar_x = 50
+    barra_y = pdf.get_y()
+
+    if total_ppto > 0:
+        # Barra presupuesto
+        pdf.set_font('Arial', '', 8)
+        pdf.set_xy(10, barra_y)
+        pdf.cell(38, bar_h, 'Ppto. Mat.:', align='R')
+        pdf.set_fill_color(52, 100, 163)
+        pdf.rect(bar_x, barra_y, bar_max_w, bar_h, 'F')
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Arial', 'B', 7)
+        pdf.set_xy(bar_x + 2, barra_y + 1.5)
+        pdf.cell(bar_max_w - 4, bar_h - 3, f'S/ {total_ppto:,.2f}')
+        pdf.set_text_color(0, 0, 0)
+
+        # Barra gastado
+        barra_y2 = barra_y + bar_h + 4
+        gast_ratio = min(total_gast / total_ppto, 1.0)
+        gast_w = bar_max_w * gast_ratio
+        pdf.set_font('Arial', '', 8)
+        pdf.set_xy(10, barra_y2)
+        pdf.cell(38, bar_h, 'Gastado:', align='R')
+        pdf.set_fill_color(*(0, 153, 76) if saldo_global >= 0 else (200, 50, 50))
+        pdf.rect(bar_x, barra_y2, gast_w if gast_w > 0 else 1, bar_h, 'F')
+        if gast_w < bar_max_w:
+            pdf.set_fill_color(220, 220, 220)
+            pdf.rect(bar_x + gast_w, barra_y2, bar_max_w - gast_w, bar_h, 'F')
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Arial', 'B', 7)
+        pdf.set_xy(bar_x + 2, barra_y2 + 1.5)
+        pdf.cell(gast_w - 4 if gast_w > 20 else gast_w, bar_h - 3, f'S/ {total_gast:,.2f}')
+        pdf.set_text_color(0, 0, 0)
+
+        pdf.set_y(barra_y2 + bar_h + 3)
+        pct = (total_gast / total_ppto * 100)
+        pdf.set_font('Arial', 'I', 8)
+        pdf.set_text_color(80, 80, 80)
+        pdf.cell(0, 5, f'  Uso acumulado total: {pct:.1f}% del presupuesto de materiales', ln=True)
+        pdf.set_text_color(0, 0, 0)
+
+    pdf.ln(6)
+
+    # ======== SECCION 3: TABLA DETALLADA ========
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_fill_color(220, 230, 241)
+    pdf.cell(0, 8, ' DETALLE POR INSUMO', border=1, fill=True, ln=True)
+
+    pdf.set_font('Arial', 'B', 7)
+    pdf.set_fill_color(200, 215, 235)
+    pdf.cell(60, 7, ' Insumo / Material', border=1, fill=True)
+    pdf.cell(15, 7, ' Pedido', align='C', border=1, fill=True)
+    pdf.cell(18, 7, ' Usado', align='C', border=1, fill=True)
+    pdf.cell(15, 7, ' Saldo', align='C', border=1, fill=True)
+    pdf.cell(22, 7, ' Ppto. S/', align='R', border=1, fill=True)
+    pdf.cell(22, 7, ' Gastado S/', align='R', border=1, fill=True)
+    pdf.cell(22, 7, ' Saldo S/', align='R', border=1, fill=True)
+    pdf.cell(16, 7, ' % Uso', align='C', border=1, fill=True, ln=True)
+
+    # --- Agrupar presupuesto por nombre de material ---
+    materiales_agrupados = {}
+    for mat in materiales_lista:
+        nombre = mat.descripcion
+        if nombre not in materiales_agrupados:
+            materiales_agrupados[nombre] = {
+                'cantidad': 0.0,
+                'precio': getattr(mat, 'precio_unitario', 0) or 0.0,
+                'unidad': mat.unidad or ''
+            }
+        materiales_agrupados[nombre]['cantidad'] += getattr(mat, 'cantidad', 0) or 0.0
+
+    pdf.set_font('Arial', '', 6)
+    for nombre, data in materiales_agrupados.items():
+        desc_safe = nombre.encode('latin-1', 'replace').decode('latin-1')
+        if len(desc_safe) > 36: desc_safe = desc_safe[:33] + '...'
         
-    pdf.cell(25, 8, f' S/ {total_saldo_global:,.2f}', align='R', border=1, fill=True, ln=True)
+        cant_pedida = data['cantidad']
+        precio_unit = data['precio']
+        cant_usada = consumos_historicos.get(nombre, 0.0)
+        
+        saldo_cant = cant_pedida - cant_usada
+        costo_ppto = cant_pedida * precio_unit
+        costo_gast = cant_usada * precio_unit
+        saldo_mon  = costo_ppto - costo_gast
+        pct_uso    = (cant_usada / cant_pedida * 100) if cant_pedida > 0 else 0
+
+        if cant_usada == 0:
+            pdf.set_text_color(140, 140, 140)
+        elif saldo_mon < 0:
+            pdf.set_text_color(200, 0, 0)
+        else:
+            pdf.set_text_color(0, 0, 0)
+
+        pdf.cell(60, 6, f' {desc_safe}', border=1)
+        pdf.cell(15, 6, f' {cant_pedida:g}', align='C', border=1)
+        txt = f' {cant_usada:g}' if cant_usada > 0 else ' No Usado'
+        pdf.cell(18, 6, txt, align='C', border=1)
+        pdf.cell(15, 6, f' {saldo_cant:g}', align='C', border=1)
+        pdf.cell(22, 6, f' {costo_ppto:,.2f}', align='R', border=1)
+        pdf.cell(22, 6, f' {costo_gast:,.2f}', align='R', border=1)
+        pdf.cell(22, 6, f' {saldo_mon:,.2f}', align='R', border=1)
+        pdf.cell(16, 6, f' {pct_uso:.0f}%', align='C', border=1, ln=True)
 
     pdf.set_text_color(0, 0, 0)
-    pdf.ln(25)
+    pdf.ln(6)
+
+    # ======== SECCION 4: INTERPRETACION IA ========
+    if texto_ia:
+        pdf.set_font('Arial', 'B', 10)
+        pdf.set_fill_color(220, 230, 241)
+        pdf.cell(0, 8, ' INTERPRETACION DEL ANALISTA (IA)', border=1, fill=True, ln=True)
+        pdf.set_font('Arial', 'I', 9)
+        pdf.set_fill_color(248, 248, 248)
+        txt_safe = texto_ia.encode('latin-1', 'replace').decode('latin-1')
+        pdf.multi_cell(0, 6, f' {txt_safe}', border=1, fill=True, align='J')
+
+    pdf.ln(20)
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(0, 10, '________________________', ln=True, align='C')
     pdf.cell(0, 5, 'Firma y Sello (Administrador)', ln=True, align='C')

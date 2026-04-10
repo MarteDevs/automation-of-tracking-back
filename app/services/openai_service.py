@@ -163,3 +163,34 @@ async def generar_resumen_ejecutivo_avance(nombre_proyecto, semana, porcentaje, 
     except Exception as e:
         print(f"Error AI resumen: {e}")
         return f"En esta semana {semana}, se alcanzó un avance del {porcentaje}%. Las actividades transcurren sin detención. {obs_texto}"
+
+async def generar_interpretacion_balance(nombre_proyecto, semana, ppto_total_igv, total_gast, total_ppto_mat, saldo_global):
+    """Genera una interpretación financiera del balance de materiales usando IA."""
+    try:
+        ahorro_porc = ((total_ppto_mat - total_gast) / total_ppto_mat * 100) if total_ppto_mat > 0 else 0
+        prompt = f"""
+Eres un analista financiero de proyectos de construcción metalmecánica.
+Redacta UN SOLO PÁRRAFO formal (máximo 5 líneas) interpretando el siguiente balance de materiales. Tono profesional y concreto.
+
+Datos del Proyecto "{nombre_proyecto}" al corte de la semana {semana}:
+- Presupuesto Total del Proyecto (con IGV): S/ {ppto_total_igv:,.2f}
+- Presupuesto Asignado a Materiales: S/ {total_ppto_mat:,.2f}
+- Materiales Gastados (acumulado): S/ {total_gast:,.2f}
+- Saldo Disponible en Materiales: S/ {saldo_global:,.2f}
+- Porcentaje de ahorro/exceso en materiales: {ahorro_porc:.1f}%
+
+Indica si el consumo es eficiente, si hay riesgo de sobregiro, y una recomendación concreta.
+Reglas: Sin saludos, sin títulos, solo el párrafo fluido.
+        """
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error AI balance: {e}")
+        if saldo_global >= 0:
+            return f"Al corte de la semana {semana}, el consumo acumulado de materiales se mantiene dentro del presupuesto establecido, registrando un saldo positivo de S/ {saldo_global:,.2f}. Se recomienda mantener el ritmo de control para garantizar la eficiencia financiera hasta el cierre del proyecto."
+        else:
+            return f"Al corte de la semana {semana}, el consumo acumulado de materiales ha superado el presupuesto en S/ {abs(saldo_global):,.2f}. Se advierte riesgo de sobregiro. Se recomienda revisar el uso de insumos y ajustar las compras para las semanas restantes."

@@ -4,7 +4,7 @@ import shutil
 import os
 import uuid
 
-from app.services.openai_service import analizar_presupuesto_pdf, generar_resumen_ejecutivo_avance
+from app.services.openai_service import analizar_presupuesto_pdf, generar_resumen_ejecutivo_avance, generar_interpretacion_balance
 from app.services.pdf_service import crear_pdf_avance
 from app.models.database import get_db
 from app.models import models
@@ -222,16 +222,42 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = 
     if not proyecto or not avance:
         raise HTTPException(status_code=404, detail="Proyecto o Avance no encontrados")
 
-    # Generamos la IA
-    texto_ia = await generar_resumen_ejecutivo_avance(
-        proyecto.nombre_proyecto, 
-        avance.semana, 
-        avance.porcentaje_avance, 
-        avance.observaciones
+    # --- Calcular totales financieros para el balance IA ---
+    materiales_lista = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
+    consumos_acum = {}
+    for av in getattr(proyecto, 'avances', []):
+        for c in getattr(av, 'consumos', []):
+            consumos_acum[c.nombre_material] = consumos_acum.get(c.nombre_material, 0.0) + c.cantidad_usada
+    
+    # Precio unitario unico por nombre (primer match, evitar doble conteo)
+    precio_por_nombre = {}
+    for m in materiales_lista:
+        if m.descripcion not in precio_por_nombre:
+            precio_por_nombre[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
+
+    total_ppto_mat = sum((m.cantidad or 0) * (m.precio_unitario or 0) for m in materiales_lista)
+    total_gast = sum(precio_por_nombre.get(nombre, 0.0) * cant for nombre, cant in consumos_acum.items())
+    saldo_global = total_ppto_mat - total_gast
+
+    # Presupuesto total del proyecto con IGV
+    costo_directo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
+    ppto_total_igv = costo_directo * 1.15 * 1.18  # 15% indirectos + 18% IGV
+
+    # Generamos los dos textos de IA en paralelo
+    import asyncio
+    texto_ia, texto_balance_ia = await asyncio.gather(
+        generar_resumen_ejecutivo_avance(
+            proyecto.nombre_proyecto, avance.semana,
+            avance.porcentaje_avance, avance.observaciones
+        ),
+        generar_interpretacion_balance(
+            proyecto.nombre_proyecto, avance.semana,
+            ppto_total_igv, total_gast, total_ppto_mat, saldo_global
+        )
     )
     
     # Dibujamos el PDF
-    pdf_path = crear_pdf_avance(proyecto, avance, texto_ia)
+    pdf_path = crear_pdf_avance(proyecto, avance, texto_ia, texto_balance_ia, ppto_total_igv)
     
     # Sanitizar el nombre del proyecto para el nombre de archivo
     import re
@@ -253,14 +279,43 @@ async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     from app.services.pdf_service import crear_pdf_balance_general
-    import re
-    # Dibujamos el PDF global
-    pdf_path = crear_pdf_balance_general(proyecto)
+    import re, asyncio
+
+    # --- Calcular totales financieros (deduplicar materiales por nombre) ---
+    materiales_lista = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
+    consumos_acum = {}
+    for av in getattr(proyecto, 'avances', []):
+        for c in getattr(av, 'consumos', []):
+            consumos_acum[c.nombre_material] = consumos_acum.get(c.nombre_material, 0.0) + c.cantidad_usada
+
+    # Construir precio unitario unico por nombre de material (primer match)
+    precio_por_nombre = {}
+    for m in materiales_lista:
+        if m.descripcion not in precio_por_nombre:
+            precio_por_nombre[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
+
+    total_ppto_mat = sum((m.cantidad or 0) * (m.precio_unitario or 0) for m in materiales_lista)
+    total_gast = sum(precio_por_nombre.get(nombre, 0.0) * cant for nombre, cant in consumos_acum.items())
+    saldo_global = total_ppto_mat - total_gast
+
+    # Presupuesto total con IGV
+    costo_directo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
+    ppto_total_igv = costo_directo * 1.15 * 1.18
+
+    # Semana mas reciente registrada
+    ultima_semana = max((av.semana for av in getattr(proyecto, 'avances', []) if av.semana), default='N/A')
+
+    # Llamada IA
+    texto_ia = await generar_interpretacion_balance(
+        proyecto.nombre_proyecto, ultima_semana,
+        ppto_total_igv, total_gast, total_ppto_mat, saldo_global
+    )
+
+    # Generar PDF enriquecido
+    pdf_path = crear_pdf_balance_general(proyecto, texto_ia=texto_ia, ppto_total_igv=ppto_total_igv)
     
-    # Sanitizar
     nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_")
     
-    import starlette.background
     return FileResponse(
         path=pdf_path, 
         filename=f"Balance_Global_{nom_limpio}.pdf",
