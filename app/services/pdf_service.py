@@ -243,6 +243,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
             cat = cat.strip().upper()
             grupos_fijos[cat].append(ob)
             
+        total_anexo_ii = 0.0
         for cat, items in grupos_fijos.items():
             pdf.set_font('Arial', 'B', 9)
             pdf.set_fill_color(0, 51, 102)
@@ -276,8 +277,16 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
             pdf.set_font('Arial', 'B', 8)
             pdf.set_fill_color(245, 245, 245)
             pdf.cell(160, 7, f' SUBTOTAL {cat}:', align='R', border=1, fill=True)
-            pdf.cell(30, 7, f' S/ {subtotal_cat:.2f}', align='R', border=1, fill=True, ln=True)
+            pdf.cell(30, 7, f' S/ {subtotal_cat:,.2f}', align='R', border=1, fill=True, ln=True)
             pdf.ln(4)
+            total_anexo_ii += subtotal_cat
+
+        # Fila de Total Final Anexo II
+        pdf.set_font('Arial', 'B', 10)
+        pdf.set_fill_color(200, 200, 200)
+        pdf.cell(160, 10, ' TOTAL COSTOS FIJOS (ANEXO II):', align='R', border=1, fill=True)
+        pdf.cell(30, 10, f' S/ {total_anexo_ii:,.2f}', align='R', border=1, fill=True, ln=True)
+        pdf.ln(6)
 
     # ------------------ PÁGINA 4: ANEXO DE COSTOS VARIABLES ---------------- #
     if proyecto.materiales:
@@ -296,6 +305,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
                 cat = 'MATERIALES'
             grupos_vars[cat].append(mat)
             
+        total_anexo_iii = 0.0
         for cat, items in grupos_vars.items():
             pdf.set_font('Arial', 'B', 9)
             pdf.set_fill_color(0, 51, 102)
@@ -329,8 +339,16 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
             pdf.set_font('Arial', 'B', 8)
             pdf.set_fill_color(245, 245, 245)
             pdf.cell(160, 7, f' SUBTOTAL {cat}:', align='R', border=1, fill=True)
-            pdf.cell(30, 7, f' S/ {subtotal_cat:.2f}', align='R', border=1, fill=True, ln=True)
+            pdf.cell(30, 7, f' S/ {subtotal_cat:,.2f}', align='R', border=1, fill=True, ln=True)
             pdf.ln(4)
+            total_anexo_iii += subtotal_cat
+
+        # Fila de Total Final Anexo III
+        pdf.set_font('Arial', 'B', 10)
+        pdf.set_fill_color(200, 200, 200)
+        pdf.cell(160, 10, ' TOTAL COSTOS VARIABLES (ANEXO III):', align='R', border=1, fill=True)
+        pdf.cell(30, 10, f' S/ {total_anexo_iii:,.2f}', align='R', border=1, fill=True, ln=True)
+        pdf.ln(6)
 
     # ------------------ PÁGINA 5: PRESUPUESTO RESUMEN ---------------- #
     pdf.add_page()
