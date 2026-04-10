@@ -528,31 +528,77 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         pdf.set_text_color(0, 0, 0)
         pdf.ln(4)
 
-        # ======== SUB-SECCION: GRAFICO COMPARATIVO ========
+        # ======== SUB-SECCION: GRAFICO COMPARATIVO (REDiseño Dual Bar) ========
+        pdf.set_fill_color(220, 230, 241)
         pdf.set_font('Arial', 'B', 9)
-        pdf.cell(0, 6, ' COMPARATIVO VISUAL (PPTO VS GASTO)', ln=True)
-        
-        y_start = pdf.get_y()
-        w_max = 140
+        pdf.cell(0, 7, ' GRAFICO COMPARATIVO: PRESUPUESTO vs GASTADO', border=1, fill=True, ln=True)
+        pdf.ln(5)
+
+        # Ajuste de márgenes para que cuadre con las tablas (A4 = 210mm)
+        # Margen izquierdo tabla suele ser 10-15. Usaremos 15 para centrar.
+        x_base = 15
+        x_label_w = 40 
+        w_max_bar = 130 # 15 + 40 + 130 = 185 (dentro de los 210mm)
         h_bar = 8
         
-        # Barra Presupuesto (Sombra)
-        pdf.set_fill_color(230, 230, 230)
-        pdf.rect(15, y_start, w_max, h_bar, 'F')
-        # Barra Gasto
+        # 1. Fila Presupuesto
+        pdf.set_font('Arial', '', 9)
+        pdf.set_x(x_base)
+        pdf.cell(x_label_w, h_bar, 'Ppto. Mat.:', align='R')
+        
+        # Barra Azul (Total)
+        pdf.set_fill_color(51, 102, 170) 
+        pdf.rect(x_base + x_label_w + 3, pdf.get_y(), w_max_bar, h_bar, 'F')
+        
+        # Texto dentro de la barra
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Arial', 'B', 8)
+        pdf.set_x(x_base + x_label_w + 6)
+        pdf.cell(w_max_bar, h_bar, f'S/ {total_ppto_mat_vi:,.2f}', align='L')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(h_bar + 3)
+
+        # 2. Fila Gastado
         pct_uso_global = (total_gast_mat_vi / total_ppto_mat_vi * 100) if total_ppto_mat_vi > 0 else 0
-        w_real = min(w_max, (pct_uso_global / 100) * w_max)
+        w_real = min(w_max_bar, (pct_uso_global / 100) * w_max_bar)
+
+        pdf.set_font('Arial', '', 9)
+        pdf.set_x(x_base)
+        pdf.cell(x_label_w, h_bar, 'Gastado:', align='R')
         
-        if pct_uso_global > 100: pdf.set_fill_color(200, 0, 0) # Rojo si excedió
-        elif pct_uso_global > 85: pdf.set_fill_color(255, 140, 0) # Naranja alerta
-        else: pdf.set_fill_color(0, 102, 51) # Verde salud
+        # Fondo Gris
+        pdf.set_fill_color(230, 230, 230)
+        pdf.rect(x_base + x_label_w + 3, pdf.get_y(), w_max_bar, h_bar, 'F')
         
-        pdf.rect(15, y_start, w_real, h_bar, 'F')
+        # Barra de Progreso
+        if pct_uso_global > 100:
+            pdf.set_fill_color(200, 30, 30)
+        else:
+            pdf.set_fill_color(0, 160, 80)
+            
+        pdf.rect(x_base + x_label_w + 3, pdf.get_y(), w_real, h_bar, 'F')
         
-        pdf.set_xy(15 + w_max + 5, y_start)
-        pdf.set_font('Arial', 'B', 9)
-        pdf.cell(0, h_bar, f'{pct_uso_global:.1f}% Uso', ln=True)
-        pdf.ln(4)
+        # Texto dentro de la barra
+        if w_real > 35:
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font('Arial', 'B', 8)
+            pdf.set_x(x_base + x_label_w + 6)
+            pdf.cell(w_real, h_bar, f'S/ {total_gast_mat_vi:,.2f}', align='L')
+        else:
+            pdf.set_text_color(100, 100, 100)
+            pdf.set_font('Arial', 'B', 8)
+            pdf.set_x(x_base + x_label_w + w_real + 6)
+            pdf.cell(w_max_bar - w_real, h_bar, f'S/ {total_gast_mat_vi:,.2f}', align='L')
+
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(h_bar + 5)
+
+        # Texto Resumen
+        pdf.set_x(x_base + x_label_w + 3)
+        pdf.set_font('Arial', 'I', 8)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 5, f'Uso acumulado total: {pct_uso_global:.1f}% del presupuesto de materiales', ln=True)
+        pdf.ln(5)
 
         # ======== SUB-SECCION: TABLA DETALLADA ========
         pdf.set_font('Arial', 'B', 9)
