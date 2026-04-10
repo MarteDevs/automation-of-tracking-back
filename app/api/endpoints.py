@@ -116,7 +116,8 @@ async def procesar_presupuesto(request: Request, file: UploadFile = File(...), d
             nombre_proyecto=datos_validados.proyecto_info.nombre_proyecto,
             fecha=datos_validados.proyecto_info.fecha,
             costo_total=datos_validados.proyecto_info.costo_total,
-            utilidad_porcentaje=datos_validados.proyecto_info.utilidad_porcentaje
+            utilidad_porcentaje=datos_validados.proyecto_info.utilidad_porcentaje,
+            otros_porcentaje=datos_validados.proyecto_info.otros_porcentaje
         )
         db.add(nuevo_proyecto)
         db.flush() # Importante: Obtenemos el ID generado del proyecto (nuevo_proyecto.id)
