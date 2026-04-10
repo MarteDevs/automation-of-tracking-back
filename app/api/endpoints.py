@@ -195,7 +195,6 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
     try:
         db.add(nuevo_avance)
         db.flush() # Para obtener el ID del avance
-        
         # Guardar consumos de materiales
         if hasattr(avance, 'consumos_materiales') and avance.consumos_materiales:
             for consumo in avance.consumos_materiales:
@@ -206,6 +205,9 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
                     unidad=consumo.unidad
                 )
                 db.add(nuevo_consumo)
+
+        # Invalidar el Balance Global al añadir nuevo seguimiento
+        proyecto.ruta_pdf = None
 
         db.commit()
         db.refresh(nuevo_avance)
@@ -403,6 +405,11 @@ def eliminar_avance_semanal(proyecto_id: int, avance_id: int, db: Session = Depe
         raise HTTPException(status_code=404, detail="El registro de seguimiento solicitado no existe.")
 
     try:
+        # Invalidar el Balance Global al eliminar un seguimiento
+        proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
+        if proyecto:
+            proyecto.ruta_pdf = None
+            
         db.delete(avance)
         db.commit()
         return {"mensaje": "Seguimiento eliminado correctamente"}
