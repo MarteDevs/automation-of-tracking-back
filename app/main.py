@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 from app.api import endpoints
@@ -102,6 +103,14 @@ run_migrations()
 
 # Incluimos las rutas definidas en la capa API
 app.include_router(endpoints.router)
+
+# --- Montaje de archivos estáticos para acceso a Reportes y Evidencias ---
+# Asegura que la carpeta uploads exista físicamente
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOADS_DIR = os.path.join(os.path.dirname(BASE_DIR), "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 @app.get("/")
 def read_root():

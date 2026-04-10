@@ -251,8 +251,9 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = 
     nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_").upper()
     nombre_archivo = f"{nom_limpio}_{label_periodo}_{avance.semana}.pdf"
     
-    # Directorio base de exportación
-    target_dir = os.path.join("uploads", "documentos_exportados", f"proyecto_{proyecto.id}", f"avance_{avance.id}")
+    # Directorio base de exportación (Ruta absoluta para evitar errores en PM2)
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target_dir = os.path.join(BASE_DIR, "uploads", "documentos_exportados", f"proyecto_{proyecto.id}", f"avance_{avance.id}")
     os.makedirs(target_dir, exist_ok=True)
     target_path = os.path.join(target_dir, nombre_archivo)
 
@@ -319,7 +320,8 @@ async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db))
     # --- Lógica de Persistencia para Balance Global ---
     nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_").upper()
     nombre_archivo = f"BALANCE_GLOBAL_{nom_limpio}.pdf"
-    target_dir = os.path.join("uploads", "documentos_exportados", f"proyecto_{proyecto.id}")
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target_dir = os.path.join(BASE_DIR, "uploads", "documentos_exportados", f"proyecto_{proyecto.id}")
     os.makedirs(target_dir, exist_ok=True)
     target_path = os.path.join(target_dir, nombre_archivo)
 
