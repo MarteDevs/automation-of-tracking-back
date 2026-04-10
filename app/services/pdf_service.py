@@ -72,6 +72,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(40, 8, 'Dias Trabajados:', border=1)
     pdf.set_font('Arial', '', 10)
+    
     dias_val = getattr(avance, 'dias_trabajados', 0)
     dias_text = str(dias_val) if dias_val is not None else '0'
     pdf.cell(0, 8, f' {dias_text}', border=1, ln=True)
