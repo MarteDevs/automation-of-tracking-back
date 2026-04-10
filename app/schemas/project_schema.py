@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, model_validator
+from typing import List, Optional, Any
 
 # --- SCHEMAS BASE (Para crear/leer) ---
 
@@ -22,10 +22,22 @@ class ManoObraBase(BaseModel):
     descripcion: str
     categoria: Optional[str] = "Mano de Obra"
     unidad: Optional[str] = ""
-    cantidad_trabajadores: float
+    cantidad_trabajadores: Optional[float] = None
     precio_unitario: float
     dias: Optional[float] = 1.0
     total: float
+
+    @model_validator(mode='before')
+    @classmethod
+    def aceptar_cantidad_como_alias(cls, data: Any) -> Any:
+        """Si la IA manda 'cantidad' en vez de 'cantidad_trabajadores', lo normalizamos."""
+        if isinstance(data, dict):
+            if data.get('cantidad_trabajadores') is None and 'cantidad' in data:
+                data['cantidad_trabajadores'] = data['cantidad']
+            # Si sigue siendo None, default a 1.0
+            if data.get('cantidad_trabajadores') is None:
+                data['cantidad_trabajadores'] = 1.0
+        return data
 
 class MaterialEquipoBase(BaseModel):
     descripcion: str
