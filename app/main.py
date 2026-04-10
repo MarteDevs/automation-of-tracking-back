@@ -40,6 +40,13 @@ def run_migrations():
                 conn.commit()
                 print("✔ Migración aplicada: columna tipo_duracion añadida en proyectos.")
                 
+            if "otros_porcentaje" not in columns_proy:
+                conn.execute(text(
+                    "ALTER TABLE proyectos ADD COLUMN otros_porcentaje REAL DEFAULT 5.0"
+                ))
+                conn.commit()
+                print("✔ Migración aplicada: columna otros_porcentaje añadida en proyectos.")
+                
             result = conn.execute(text("PRAGMA table_info(avances_semanales)"))
             columns = [row[1] for row in result.fetchall()]
             if "tipo_periodo" not in columns:
