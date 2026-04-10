@@ -91,7 +91,7 @@ async def procesar_presupuesto(request: Request, file: UploadFile = File(...), d
 
     try:
         # 2. Enviar a la capa de Servicio (OpenAI)
-        datos_extraidos = analizar_presupuesto_pdf(temp_path)
+        datos_extraidos = await analizar_presupuesto_pdf(temp_path)
     finally:
         # 3. Limpiar archivo temporal siempre
         if os.path.exists(temp_path):
@@ -202,7 +202,7 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
         raise HTTPException(status_code=500, detail=f"Error al registrar el avance: {str(e)}")
 
 @router.get("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}/descargar-pdf", dependencies=[Depends(get_current_user)])
-def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depends(get_db)):
+async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     avance = db.query(models.AvanceSemanal).filter(models.AvanceSemanal.id == avance_id, models.AvanceSemanal.proyecto_id == proyecto_id).first()
     
@@ -210,7 +210,7 @@ def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depend
         raise HTTPException(status_code=404, detail="Proyecto o Avance no encontrados")
 
     # Generamos la IA
-    texto_ia = generar_resumen_ejecutivo_avance(
+    texto_ia = await generar_resumen_ejecutivo_avance(
         proyecto.nombre_proyecto, 
         avance.semana, 
         avance.porcentaje_avance, 
