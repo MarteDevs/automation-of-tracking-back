@@ -289,6 +289,8 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
         for mat in proyecto.materiales:
             cat = getattr(mat, 'categoria', '') or 'Materiales'
             cat = cat.strip().upper()
+            if cat == 'RRCITA':
+                cat = 'MATERIALES'
             grupos_vars[cat].append(mat)
             
         for cat, items in grupos_vars.items():

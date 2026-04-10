@@ -105,7 +105,8 @@ async def analizar_presupuesto_pdf(ruta_archivo_pdf):
         instruccion_compacta = """Eres un extractor de datos JSON para presupuestos de soldadura.
 Devuelve SOLO JSON compacto. Extrae TODOS los items indicados. No omitas ninguno.
 Campos: categoria, descripcion, unidad, cantidad, precio_unitario, dias, total.
-Formato: {"materiales_y_equipos":[{"categoria":"X","descripcion":"X","unidad":"X","cantidad":1,"precio_unitario":0.0,"dias":1.0,"total":0.0}]}"""
+Formato: {"materiales_y_equipos":[{"categoria":"X","descripcion":"X","unidad":"X","cantidad":1,"precio_unitario":0.0,"dias":1.0,"total":0.0}]}
+REGLA CRITICA: Para el campo "categoria", asigna un titulo claro y legible como "MATERIALES", "EQUIPOS", o "IMPLEMENTOS". NUNCA metas texto basura ni codigos raros (como "RRCITA")."""
 
         # Disparamos las dos llamadas pesadas en paralelo
         async def call_ai(system_prompt, user_content, tokens=4000):
@@ -124,8 +125,8 @@ Formato: {"materiales_y_equipos":[{"categoria":"X","descripcion":"X","unidad":"X
         # Ejecución concurrente
         print("🚀 Lanzando extracciones paralelas...")
         results = await asyncio.gather(
-            call_ai("Extrae SOLO la seccion 6 MATERIALES.", f"Texto:\n\n{texto_sec6 or texto_completo}", tokens=8000),
-            call_ai("Extrae SOLO las secciones 7 al 11.", f"Texto:\n\n{texto_sec7_11 or paginas[-1]}", tokens=4000)
+            call_ai("Extrae SOLO la seccion 6 MATERIALES. IMPORTANTE: En el JSON, la 'categoria' SIEMPRE debe ser exactamente 'MATERIALES' (mayusculas).", f"Texto:\n\n{texto_sec6 or texto_completo}", tokens=8000),
+            call_ai("Extrae SOLO las secciones 7 al 11. IMPORTANTE: Asigna la 'categoria' al nombre semántico de su sección (ej: EQUIPOS DE PROTECCION, IMPLEMENTOS, etc).", f"Texto:\n\n{texto_sec7_11 or paginas[-1]}", tokens=4000)
         )
         
         lista_materiales, lista_otros = results
