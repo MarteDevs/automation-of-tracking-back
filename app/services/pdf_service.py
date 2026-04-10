@@ -340,12 +340,16 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     costo_mat = sum(mat.total for mat in getattr(proyecto, 'materiales', []))
     costo_directo = costo_mo + costo_mat
     
-    gastos_generales = costo_directo * 0.10
-    utilidad_porc = (proyecto.utilidad_porcentaje / 100.0) if proyecto.utilidad_porcentaje else 0.15
+    # Porcentajes dinámicos extraídos o por defecto
+    utilidad_porc = (proyecto.utilidad_porcentaje / 100.0) if proyecto.utilidad_porcentaje else 0.10
+    otros_porc = (proyecto.otros_porcentaje / 100.0) if getattr(proyecto, 'otros_porcentaje', None) else 0.05
+    
     utilidad_moneda = costo_directo * utilidad_porc
-    subtotal = costo_directo + gastos_generales + utilidad_moneda
-    igv = subtotal * 0.18
-    presupuesto_total = subtotal + igv
+    otros_moneda = costo_directo * otros_porc
+    
+    subtotal_con_indirectos = costo_directo + utilidad_moneda + otros_moneda
+    igv = subtotal_con_indirectos * 0.18
+    presupuesto_total = subtotal_con_indirectos + igv
     
     # Dibujar Tabla Centrada
     pdf.set_x(35)
@@ -355,17 +359,17 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     
     pdf.set_x(35)
     pdf.set_font('Arial', '', 10)
-    pdf.cell(70, 10, ' GASTOS GENERALES (10%)', border=1)
-    pdf.cell(50, 10, f' S/ {gastos_generales:,.2f}', border=1, align='R', ln=True)
+    pdf.cell(70, 10, f' UTILIDAD ({(utilidad_porc * 100):.1f}%)', border=1)
+    pdf.cell(50, 10, f' S/ {utilidad_moneda:,.2f}', border=1, align='R', ln=True)
     
     pdf.set_x(35)
-    pdf.cell(70, 10, f' UTILIDAD ({(utilidad_porc * 100):.0f}%)', border=1)
-    pdf.cell(50, 10, f' S/ {utilidad_moneda:,.2f}', border=1, align='R', ln=True)
+    pdf.cell(70, 10, f' OTROS ({(otros_porc * 100):.1f}%)', border=1)
+    pdf.cell(50, 10, f' S/ {otros_moneda:,.2f}', border=1, align='R', ln=True)
     
     pdf.set_x(35)
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(70, 10, ' SUBTOTAL', border=1)
-    pdf.cell(50, 10, f' S/ {subtotal:,.2f}', border=1, align='R', ln=True)
+    pdf.cell(50, 10, f' S/ {subtotal_con_indirectos:,.2f}', border=1, align='R', ln=True)
     
     pdf.set_x(35)
     pdf.set_font('Arial', '', 10)

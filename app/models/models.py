@@ -10,6 +10,7 @@ class Proyecto(Base):
     fecha = Column(String) # Puedes usar Date si parseas la fecha del JSON
     costo_total = Column(Float)
     utilidad_porcentaje = Column(Float)
+    otros_porcentaje = Column(Float, default=5.0)
     semanas_estimadas = Column(Integer, default=0)
     tipo_duracion = Column(String, default="SEMANAS", server_default="SEMANAS", nullable=False)
 

@@ -8,6 +8,7 @@ class ProyectoBase(BaseModel):
     fecha: str
     costo_total: float
     utilidad_porcentaje: float
+    otros_porcentaje: Optional[float] = 5.0
     semanas_estimadas: Optional[int] = 0
     tipo_duracion: Optional[str] = "SEMANAS"
 

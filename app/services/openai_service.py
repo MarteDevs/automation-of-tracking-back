@@ -48,19 +48,21 @@ def analizar_presupuesto_pdf(ruta_archivo_pdf):
 
         REGLAS:
         1. Para "nombre_proyecto", extrae el texto bajo "TRABAJOS REALIZADOS".
-        2. Para "costo_total" usa el valor final etiquetado COSTO TOTAL. Para "utilidad_porcentaje" usa el % de Utilidad.
-        3. Para "mano_de_obra" (Costos Fijos):
+        2. Para "costo_total" usa el valor final etiquetado COSTO TOTAL.
+        3. Para "utilidad_porcentaje", busca el valor % de la fila "Utilidad".
+        4. Para "otros_porcentaje", busca el valor % de la fila "otros" o "Gastos Generales".
+        5. Para "mano_de_obra" (Costos Fijos):
            - Seccion MANO DE OBRA (1): Crea UNA SOLA fila con descripcion="TOTAL MANO DE OBRA", precio_unitario=IGUAL al valor numerico del TOTAL MANO DE OBRA, cantidad_trabajadores=1, dias=1, total=IGUAL ese mismo valor numerico.
            - Seccion LOCAL (2): extrae el item normalmente.
            - Seccion VIGILANCIA (3): extrae el item normalmente.
            - Seccion ENERGIA (4): extrae el item normalmente.
            - Seccion HERRAMIENTAS (5): extrae el item normalmente.
            - Etiqueta categoria con el nombre exacto de la seccion.
-        4. Para "materiales_y_equipos" devuelve una lista VACIA: []
+        6. Para "materiales_y_equipos" devuelve una lista VACIA: []
 
         Estructura JSON obligatoria (rellena los 0.0 con los valores reales):
         {
-            "proyecto_info": {"nombre_proyecto": "", "fecha": "", "costo_total": 0.0, "utilidad_porcentaje": 0.0},
+            "proyecto_info": {"nombre_proyecto": "", "fecha": "", "costo_total": 0.0, "utilidad_porcentaje": 0.0, "otros_porcentaje": 0.0},
             "mano_de_obra": [
                 {"categoria": "MANO DE OBRA", "descripcion": "TOTAL MANO DE OBRA", "unidad": "Global", "cantidad_trabajadores": 1, "precio_unitario": 0.0, "dias": 1, "total": 0.0}
             ],
