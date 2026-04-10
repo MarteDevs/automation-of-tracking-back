@@ -64,7 +64,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.set_text_color(0, 0, 0)
     
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(40, 8, 'Fecha Fin:', border=1)
+    pdf.cell(40, 8, 'Fecha del Seguimiento:', border=1)
     pdf.set_font('Arial', '', 10)
     fecha_val = getattr(avance, 'fecha_fin', '')
     pdf.cell(60, 8, f' {fecha_val if fecha_val else "No Registrada"}', border=1)
@@ -390,7 +390,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.cell(0, 10, '________________________', ln=True, align='C')
     pdf.cell(0, 5, 'Firma y Sello', ln=True, align='C')
     pdf.set_font('Arial', '', 9)
-    pdf.cell(0, 5, 'Ingeniero Responsable / Inspector', ln=True, align='C')
+    pdf.cell(0, 5, 'Administrador', ln=True, align='C')
             
     # Guardar en archivo temporal seguro
     fd, temp_path = tempfile.mkstemp(suffix='.pdf')
