@@ -11,6 +11,7 @@ class ProyectoBase(BaseModel):
     otros_porcentaje: Optional[float] = 5.0
     semanas_estimadas: Optional[int] = 0
     tipo_duracion: Optional[str] = "SEMANAS"
+    ruta_pdf: Optional[str] = None
 
 class ProyectoCreate(ProyectoBase):
     pass
@@ -63,6 +64,7 @@ class AvanceSemanalBase(BaseModel):
     tipo_periodo: str = "SEMANA"  # SEMANA o DIA
     fecha_fin: Optional[str] = None
     dias_trabajados: Optional[float] = 0
+    ruta_pdf: Optional[str] = None
 
 class AvanceSemanalCreate(AvanceSemanalBase):
     consumos_materiales: Optional[List[ConsumoMaterialBase]] = []

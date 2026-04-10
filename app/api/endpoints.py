@@ -243,12 +243,28 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = 
     costo_directo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
     ppto_total_igv = costo_directo * 1.15 * 1.18  # 15% indirectos + 18% IGV
 
-    # Generamos los dos textos de IA en paralelo
+    # --- Lógica de Persistencia ---
+    label_periodo = "Semana" if getattr(avance, 'tipo_periodo', 'SEMANA') == 'SEMANA' else "Dia"
+    import re
+    nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_").upper()
+    nombre_archivo = f"{nom_limpio}_{label_periodo}_{avance.semana}.pdf"
+    
+    # Directorio base de exportación
+    target_dir = os.path.join("uploads", "documentos_exportados", f"proyecto_{proyecto.id}", f"avance_{avance.id}")
+    os.makedirs(target_dir, exist_ok=True)
+    target_path = os.path.join(target_dir, nombre_archivo)
+
+    # Si ya existe en DB y en disco, servir directamente
+    if avance.ruta_pdf and os.path.exists(avance.ruta_pdf):
+        print(f"DEBUG: Sirviendo PDF existente para avance {avance.id}")
+        return FileResponse(path=avance.ruta_pdf, filename=nombre_archivo, media_type="application/pdf")
+
+    # Si no existe, generamos los dos textos de IA en paralelo
     import asyncio
     texto_ia, texto_balance_ia = await asyncio.gather(
         generar_resumen_ejecutivo_avance(
             proyecto.nombre_proyecto, avance.semana,
-            avance.porcentaje_avance, avance.observaciones
+            avance.porcentaje_avance, avance.observaciones or ""
         ),
         generar_interpretacion_balance(
             proyecto.nombre_proyecto, avance.semana,
@@ -256,18 +272,18 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = 
         )
     )
     
-    # Dibujamos el PDF
-    pdf_path = crear_pdf_avance(proyecto, avance, texto_ia, texto_balance_ia, ppto_total_igv)
+    # Generar PDF temporal
+    pdf_temp_path = crear_pdf_avance(proyecto, avance, texto_ia, texto_balance_ia, ppto_total_igv)
     
-    # Sanitizar el nombre del proyecto para el nombre de archivo
-    import re
-    nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_")
-    
-    label_periodo = "Semana" if getattr(avance, 'tipo_periodo', 'SEMANA') == 'SEMANA' else "Dia"
-    
+    # Mover a ruta final y actualizar DB
+    import shutil
+    shutil.move(pdf_temp_path, target_path)
+    avance.ruta_pdf = target_path
+    db.commit()
+
     return FileResponse(
-        path=pdf_path, 
-        filename=f"{nom_limpio}_{label_periodo}_{avance.semana}.pdf",
+        path=target_path, 
+        filename=nombre_archivo,
         media_type="application/pdf"
     )
 
@@ -298,27 +314,38 @@ async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db))
     total_gast = sum(precio_por_nombre.get(nombre, 0.0) * cant for nombre, cant in consumos_acum.items())
     saldo_global = total_ppto_mat - total_gast
 
-    # Presupuesto total con IGV
+    # --- Lógica de Persistencia para Balance Global ---
+    nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_").upper()
+    nombre_archivo = f"BALANCE_GLOBAL_{nom_limpio}.pdf"
+    target_dir = os.path.join("uploads", "documentos_exportados", f"proyecto_{proyecto.id}")
+    os.makedirs(target_dir, exist_ok=True)
+    target_path = os.path.join(target_dir, nombre_archivo)
+
+    if proyecto.ruta_pdf and os.path.exists(proyecto.ruta_pdf):
+        print(f"DEBUG: Sirviendo Balance Global existente para proyecto {proyecto.id}")
+        return FileResponse(path=proyecto.ruta_pdf, filename=nombre_archivo, media_type="application/pdf")
+
+    # Si no existe, calcular ppto con IGV para el balance
     costo_directo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
     ppto_total_igv = costo_directo * 1.15 * 1.18
 
-    # Semana mas reciente registrada
-    ultima_semana = max((av.semana for av in getattr(proyecto, 'avances', []) if av.semana), default='N/A')
-
-    # Llamada IA
+    # IA interpretation
+    from app.api.endpoints import generar_interpretacion_balance
     texto_ia = await generar_interpretacion_balance(
-        proyecto.nombre_proyecto, ultima_semana,
+        proyecto.nombre_proyecto, "FINAL/ACUMULADO",
         ppto_total_igv, total_gast, total_ppto_mat, saldo_global
     )
 
-    # Generar PDF enriquecido
-    pdf_path = crear_pdf_balance_general(proyecto, texto_ia=texto_ia, ppto_total_igv=ppto_total_igv)
+    pdf_temp_path = crear_pdf_balance_general(proyecto, texto_ia, ppto_total_igv)
     
-    nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_")
-    
+    import shutil
+    shutil.move(pdf_temp_path, target_path)
+    proyecto.ruta_pdf = target_path
+    db.commit()
+
     return FileResponse(
-        path=pdf_path, 
-        filename=f"Balance_Global_{nom_limpio}.pdf",
+        path=target_path, 
+        filename=nombre_archivo,
         media_type="application/pdf"
     )
 
