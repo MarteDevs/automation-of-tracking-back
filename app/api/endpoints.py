@@ -194,6 +194,19 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
     
     try:
         db.add(nuevo_avance)
+        db.flush() # Para obtener el ID del avance
+        
+        # Guardar consumos de materiales
+        if hasattr(avance, 'consumos_materiales') and avance.consumos_materiales:
+            for consumo in avance.consumos_materiales:
+                nuevo_consumo = models.ConsumoMaterial(
+                    avance_id=nuevo_avance.id,
+                    nombre_material=consumo.nombre_material,
+                    cantidad_usada=consumo.cantidad_usada,
+                    unidad=consumo.unidad
+                )
+                db.add(nuevo_consumo)
+
         db.commit()
         db.refresh(nuevo_avance)
         return nuevo_avance

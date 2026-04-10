@@ -50,6 +50,11 @@ class MaterialEquipoBase(BaseModel):
     dias: Optional[float] = 1.0
     total: float
 
+class ConsumoMaterialBase(BaseModel):
+    nombre_material: str
+    cantidad_usada: float
+    unidad: Optional[str] = ""
+
 class AvanceSemanalBase(BaseModel):
     semana: int
     porcentaje_avance: float
@@ -60,7 +65,7 @@ class AvanceSemanalBase(BaseModel):
     dias_trabajados: Optional[float] = 0
 
 class AvanceSemanalCreate(AvanceSemanalBase):
-    pass
+    consumos_materiales: Optional[List[ConsumoMaterialBase]] = []
 
 # --- SCHEMA DEL JSON DE OPENAI ---
 # Este schema validará exactamente lo que extraiga OpenAI del PDF
@@ -87,9 +92,17 @@ class MaterialEquipoResponse(MaterialEquipoBase):
     class Config:
         from_attributes = True
 
+class ConsumoMaterialResponse(ConsumoMaterialBase):
+    id: int
+    avance_id: int
+
+    class Config:
+        from_attributes = True
+
 class AvanceSemanalResponse(AvanceSemanalBase):
     id: int
     proyecto_id: int
+    consumos: List[ConsumoMaterialResponse] = []
 
     class Config:
         from_attributes = True

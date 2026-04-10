@@ -63,4 +63,15 @@ class AvanceSemanal(Base):
     dias_trabajados = Column(Float, default=0)
 
     proyecto = relationship("Proyecto", back_populates="avances")
+    consumos = relationship("ConsumoMaterial", back_populates="avance", cascade="all, delete-orphan")
 
+class ConsumoMaterial(Base):
+    __tablename__ = "consumos_materiales"
+
+    id = Column(Integer, primary_key=True, index=True)
+    avance_id = Column(Integer, ForeignKey("avances_semanales.id"))
+    nombre_material = Column(String)  # Tracking explicit name in case it changes
+    cantidad_usada = Column(Float)
+    unidad = Column(String, default="")
+
+    avance = relationship("AvanceSemanal", back_populates="consumos")

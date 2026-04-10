@@ -77,7 +77,9 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     dias_text = str(dias_val) if dias_val is not None else '0'
     pdf.cell(0, 8, f' {dias_text}', border=1, ln=True)
     
-    pdf.ln(10)
+    pdf.ln(7)
+    
+    pdf.ln(7)
     
     # Resumen de IA
     pdf.set_font('Arial', 'B', 11)
@@ -380,6 +382,57 @@ def crear_pdf_avance(proyecto, avance, texto_ai):
     pdf.set_font('Arial', 'B', 11)
     pdf.cell(70, 12, ' PRESUPUESTO TOTAL DEL PROYECTO', border=1, fill=True)
     pdf.cell(50, 12, f' S/ {presupuesto_total:,.2f}', border=1, align='R', fill=True, ln=True)
+
+    # ------------------ ANEXO V: REPORTE POR CONSUMO DE MATERIALES ---------------- #
+    if hasattr(avance, 'consumos') and len(avance.consumos) > 0:
+        pdf.add_page()
+        pdf.set_text_color(0, 51, 102)
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 10, 'ANEXO V: REPORTE POR CONSUMO DE MATERIALES', ln=True, align='C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(10)
+
+        pdf.set_font('Arial', 'B', 9)
+        pdf.set_fill_color(220, 230, 241)
+        pdf.cell(80, 7, ' Material / Insumo', border=1, fill=True)
+        pdf.cell(20, 7, ' Cantidad', align='C', border=1, fill=True)
+        pdf.cell(20, 7, ' Unidad', align='C', border=1, fill=True)
+        pdf.cell(30, 7, ' P. Unitario S/', align='C', border=1, fill=True)
+        pdf.cell(40, 7, ' Subtotal S/', align='R', border=1, fill=True, ln=True)
+        
+        pdf.set_font('Arial', '', 9)
+        total_gastado = 0.0
+        
+        for c in avance.consumos:
+            desc_safe = c.nombre_material.encode('latin-1', 'replace').decode('latin-1')
+            if len(desc_safe) > 40: desc_safe = desc_safe[:37] + "..."
+            
+            # Buscar precio unitario en el proyecto maestro
+            precio_unitario = 0.0
+            if hasattr(proyecto, 'materiales'):
+                for mat in proyecto.materiales:
+                    if mat.descripcion == c.nombre_material:
+                        precio_unitario = getattr(mat, 'precio_unitario', 0.0) or 0.0
+                        break
+            
+            cant = getattr(c, 'cantidad_usada', 0.0) or 0.0
+            subtotal = precio_unitario * cant
+            total_gastado += subtotal
+            
+            pdf.cell(80, 7, f' {desc_safe}', border=1)
+            pdf.cell(20, 7, f" {cant}", align='C', border=1)
+            unidad_safe = (c.unidad or "-").encode('latin-1', 'replace').decode('latin-1')
+            pdf.cell(20, 7, f" {unidad_safe}", align='C', border=1)
+            pdf.cell(30, 7, f" {precio_unitario:,.2f}", align='C', border=1)
+            pdf.cell(40, 7, f" {subtotal:,.2f}", align='R', border=1, ln=True)
+        
+        # Fila de Total Anexo V
+        pdf.set_font('Arial', 'B', 9)
+        pdf.set_fill_color(245, 245, 245)
+        pdf.cell(150, 7, ' COSTO TOTAL DE BIENES CONSUMIDOS:', align='R', border=1, fill=True)
+        pdf.set_text_color(0, 102, 51) # Color verde oscuro
+        pdf.cell(40, 7, f' S/ {total_gastado:,.2f}', align='R', border=1, fill=True, ln=True)
+        pdf.set_text_color(0, 0, 0) # Restaurar color
 
     pdf.ln(25)
     
