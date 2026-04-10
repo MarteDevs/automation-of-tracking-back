@@ -218,11 +218,15 @@ def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depend
     # Dibujamos el PDF
     pdf_path = crear_pdf_avance(proyecto, avance, texto_ia)
     
-    nom_seguro = proyecto.nombre_proyecto.replace(" ", "_")[:15]
+    # Sanitizar el nombre del proyecto para el nombre de archivo
+    import re
+    nom_limpio = re.sub(r'[^\w\s-]', '', proyecto.nombre_proyecto).strip().replace(" ", "_")
+    
+    label_periodo = "Semana" if getattr(avance, 'tipo_periodo', 'SEMANA') == 'SEMANA' else "Dia"
     
     return FileResponse(
         path=pdf_path, 
-        filename=f"Reporte_S{avance.semana}_{nom_seguro}.pdf",
+        filename=f"{nom_limpio}_{label_periodo}_{avance.semana}.pdf",
         media_type="application/pdf"
     )
 
