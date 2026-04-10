@@ -64,6 +64,7 @@ def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.P
     
     proyecto.semanas_estimadas = config.semanas_estimadas
     proyecto.tipo_duracion = config.tipo_duracion
+    proyecto.fecha = config.fecha
     db.commit()
     db.refresh(proyecto)
     return proyecto

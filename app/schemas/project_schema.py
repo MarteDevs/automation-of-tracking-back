@@ -18,6 +18,7 @@ class ProyectoCreate(ProyectoBase):
 class ProyectoUpdate(BaseModel):
     semanas_estimadas: int
     tipo_duracion: str
+    fecha: str
 
 class ManoObraBase(BaseModel):
     descripcion: str
