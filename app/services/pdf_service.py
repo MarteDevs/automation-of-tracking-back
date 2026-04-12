@@ -606,10 +606,10 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         pdf.cell(75, 7, ' Insumo / Material', border=1, fill=True)
         pdf.cell(15, 7, ' Ped.', align='C', border=1, fill=True)
         pdf.cell(18, 7, ' Usado', align='C', border=1, fill=True)
-        pdf.cell(22, 7, ' Ppto. S/', align='R', border=1, fill=True)
-        pdf.cell(25, 7, ' Gast. S/', align='R', border=1, fill=True)
+        pdf.cell(22, 7, ' Total S/', align='C', border=1, fill=True)
+        pdf.cell(25, 7, ' Gast. S/', align='C', border=1, fill=True)
         pdf.cell(15, 7, ' %', align='C', border=1, fill=True)
-        pdf.cell(20, 7, ' Saldo S/', align='R', border=1, fill=True, ln=True)
+        pdf.cell(20, 7, ' Saldo S/', align='C', border=1, fill=True, ln=True)
 
         # --- Agrupar presupuesto por nombre de material ---
         materiales_agrupados = {}
@@ -649,6 +649,20 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
             pdf.cell(25, 6, f' {costo_gast:,.2f}', align='R', border=1)
             pdf.cell(15, 6, f' {pct_uso_insumo:.0f}%', align='C', border=1)
             pdf.cell(20, 6, f' {saldo_mon:,.0f}', align='R', border=1, ln=True)
+
+        # Fila de Totales Generales
+        pdf.set_font('Arial', 'B', 8)
+        pdf.set_fill_color(240, 240, 240)
+        pdf.cell(75 + 15 + 18, 6, ' TOTALES:', align='R', border=1, fill=True)
+        pdf.cell(22, 6, f' {total_ppto_mat_vi:,.2f}', align='R', border=1, fill=True)
+        pdf.cell(25, 6, f' {total_gast_mat_vi:,.2f}', align='R', border=1, fill=True)
+        pct_global = (total_gast_mat_vi / total_ppto_mat_vi * 100) if total_ppto_mat_vi > 0 else 0
+        
+        pdf.set_text_color(*(0, 102, 51) if pct_global <= 100 else (200, 0, 0))
+        pdf.cell(15, 6, f' {pct_global:.0f}%', align='C', border=1, fill=True)
+        
+        pdf.set_text_color(*(0, 102, 51) if saldo_global_vi >= 0 else (200, 0, 0))
+        pdf.cell(20, 6, f' {saldo_global_vi:,.0f}', align='R', border=1, fill=True, ln=True)
 
         pdf.set_text_color(0, 0, 0)
         pdf.ln(6)

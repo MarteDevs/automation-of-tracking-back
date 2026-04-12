@@ -217,7 +217,7 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
         raise HTTPException(status_code=500, detail=f"Error al registrar el avance: {str(e)}")
 
 @router.get("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}/descargar-pdf", dependencies=[Depends(get_current_user)])
-async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = Depends(get_db)):
+async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, regenerar: bool = False, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     avance = db.query(models.AvanceSemanal).filter(models.AvanceSemanal.id == avance_id, models.AvanceSemanal.proyecto_id == proyecto_id).first()
     
@@ -257,8 +257,8 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, db: Session = 
     os.makedirs(target_dir, exist_ok=True)
     target_path = os.path.join(target_dir, nombre_archivo)
 
-    # Si ya existe en DB y en disco, servir directamente
-    if avance.ruta_pdf and os.path.exists(avance.ruta_pdf):
+    # Si ya existe en DB y en disco, servir directamente si no piden regenerar
+    if not regenerar and avance.ruta_pdf and os.path.exists(avance.ruta_pdf):
         print(f"DEBUG: Sirviendo PDF existente para avance {avance.id}")
         return FileResponse(path=avance.ruta_pdf, filename=nombre_archivo, media_type="application/pdf")
 
