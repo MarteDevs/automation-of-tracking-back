@@ -519,12 +519,16 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         pdf.set_font('Arial', 'B', 9)
         pdf.set_fill_color(245, 245, 245)
         pdf.cell(130, 8, '  SALDO DISPONIBLE EN MATERIALES', border=1, fill=True)
+        
+        is_completed = getattr(avance, 'porcentaje_avance', 0) >= 100.0
         if saldo_global_vi >= 0:
             pdf.set_text_color(0, 102, 51)
-            pdf.cell(60, 8, f'  S/ {saldo_global_vi:,.2f} (AHORRO)', border=1, fill=True, align='R', ln=True)
+            etiqueta = "(AHORRO CERRADO)" if is_completed else "(A FAVOR / REMANENTE)"
+            pdf.cell(60, 8, f'  S/ {saldo_global_vi:,.2f}  {etiqueta}', border=1, fill=True, align='R', ln=True)
         else:
             pdf.set_text_color(200, 0, 0)
-            pdf.cell(60, 8, f'  S/ {abs(saldo_global_vi):,.2f} (EXCESO)', border=1, fill=True, align='R', ln=True)
+            etiqueta = "(PÉRDIDA / EXCESO)" if is_completed else "(SOBREGIRO TEMPORAL)"
+            pdf.cell(60, 8, f'  S/ {abs(saldo_global_vi):,.2f}  {etiqueta}', border=1, fill=True, align='R', ln=True)
         pdf.set_text_color(0, 0, 0)
         pdf.ln(4)
 
@@ -756,12 +760,18 @@ def crear_pdf_balance_general(proyecto, texto_ia='', ppto_total_igv=0.0) -> str:
     pdf.set_font('Arial', 'B', 9)
     pdf.set_fill_color(245, 245, 245)
     pdf.cell(130, 8, '  SALDO DISPONIBLE EN MATERIALES', border=1, fill=True)
+    
+    pct_global_fisico = max([av.porcentaje_avance for av in getattr(proyecto, 'avances', [])], default=0.0)
+    is_completed = pct_global_fisico >= 100.0
+
     if saldo_global >= 0:
         pdf.set_text_color(0, 102, 51)
-        saldo_txt = f'  S/ {saldo_global:,.2f}  (AHORRO)'
+        etiqueta = "(AHORRO CERRADO)" if is_completed else "(A FAVOR / REMANENTE)"
+        saldo_txt = f'  S/ {saldo_global:,.2f}  {etiqueta}'
     else:
         pdf.set_text_color(200, 0, 0)
-        saldo_txt = f'  S/ {saldo_global:,.2f}  (EXCESO)'
+        etiqueta = "(PÉRDIDA / EXCESO)" if is_completed else "(SOBREGIRO TEMPORAL)"
+        saldo_txt = f'  S/ {abs(saldo_global):,.2f}  {etiqueta}'
     pdf.cell(60, 8, saldo_txt, border=1, fill=True, align='R', ln=True)
     pdf.set_text_color(0, 0, 0)
     pdf.ln(8)
