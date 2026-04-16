@@ -177,9 +177,10 @@ Datos del Proyecto "{nombre_proyecto}" al corte de la semana {semana}:
 - Presupuesto Asignado a Materiales: S/ {total_ppto_mat:,.2f}
 - Materiales Gastados (acumulado): S/ {total_gast:,.2f}
 - Saldo Disponible en Materiales: S/ {saldo_global:,.2f}
-- Porcentaje de ahorro/exceso en materiales: {ahorro_porc:.1f}%
+- Porcentaje restante en materiales: {ahorro_porc:.1f}%
 
 Indica si el consumo es eficiente, si hay riesgo de sobregiro, y una recomendación concreta.
+REGLA CRITICA: Como el proyecto está en ejecución, NO uses la palabra "ahorro" (usa "remanente" o "saldo a favor").
 Reglas: Sin saludos, sin títulos, solo el párrafo fluido.
         """
         response = await client.chat.completions.create(
