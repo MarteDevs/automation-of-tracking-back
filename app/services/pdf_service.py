@@ -518,7 +518,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         
         pdf.set_font('Arial', 'B', 9)
         pdf.set_fill_color(245, 245, 245)
-        pdf.cell(130, 8, '  SALDO DISPONIBLE EN MATERIALES', border=1, fill=True)
+        pdf.cell(130, 8, '  SALDO DISPONIBLE EN MATERIALES PARA USO', border=1, fill=True)
         
         is_completed = getattr(avance, 'porcentaje_avance', 0) >= 100.0
         if saldo_global_vi >= 0:
@@ -548,7 +548,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         # 1. Fila Presupuesto
         pdf.set_font('Arial', '', 9)
         pdf.set_x(x_base)
-        pdf.cell(x_label_w, h_bar, 'Ppto. Mat.:', align='R')
+        pdf.cell(x_label_w, h_bar, 'Propuesto Total:', align='R')
         
         # Barra Azul (Total)
         pdf.set_fill_color(51, 102, 170) 
@@ -759,7 +759,7 @@ def crear_pdf_balance_general(proyecto, texto_ia='', ppto_total_igv=0.0) -> str:
 
     pdf.set_font('Arial', 'B', 9)
     pdf.set_fill_color(245, 245, 245)
-    pdf.cell(130, 8, '  SALDO DISPONIBLE EN MATERIALES', border=1, fill=True)
+    pdf.cell(130, 8, '  SALDO DISPONIBLE EN MATERIALES PARA USO', border=1, fill=True)
     
     pct_global_fisico = max([av.porcentaje_avance for av in getattr(proyecto, 'avances', [])], default=0.0)
     is_completed = pct_global_fisico >= 100.0
@@ -791,7 +791,7 @@ def crear_pdf_balance_general(proyecto, texto_ia='', ppto_total_igv=0.0) -> str:
         # Barra presupuesto
         pdf.set_font('Arial', '', 8)
         pdf.set_xy(10, barra_y)
-        pdf.cell(38, bar_h, 'Ppto. Mat.:', align='R')
+        pdf.cell(38, bar_h, 'Propuesto Total:', align='R')
         pdf.set_fill_color(52, 100, 163)
         pdf.rect(bar_x, barra_y, bar_max_w, bar_h, 'F')
         pdf.set_text_color(255, 255, 255)
