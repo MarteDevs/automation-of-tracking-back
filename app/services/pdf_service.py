@@ -402,7 +402,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     
     pdf.set_x(35)
     pdf.set_font('Arial', '', 10)
-    pdf.cell(70, 10, ' COSTOS INDIRECTOS', border=1)
+    pdf.cell(70, 10, ' COSTOS INDIRECTOS (15%)', border=1)
     pdf.cell(50, 10, f' S/ {costos_indirectos:,.2f}', border=1, align='R', ln=True)
     
     pdf.set_x(35)
