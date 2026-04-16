@@ -17,13 +17,14 @@ load_dotenv()
 # Lee los dominios directamente desde el .env y genera Lista nativa.
 origenes = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
 
-# Configuración extendida de CORS (Extraccion Segura Env)
+# Configuración extendida de CORS (Extracción Segura Env)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origenes,
-    allow_credentials=True,
+    allow_origins=origenes if origenes != ["*"] else ["*"],
+    allow_credentials=True if origenes != ["*"] else False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ── Migración automática: añadir columna tipo_periodo si no existe ──

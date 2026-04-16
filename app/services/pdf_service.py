@@ -738,7 +738,182 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     pdf.cell(0, 5, 'Firma y Sello', ln=True, align='C')
     pdf.set_font('Arial', '', 9)
     pdf.cell(0, 5, 'Administrador', ln=True, align='C')
-            
+
+    # ---------- EVIDENCIA CONSOLIDADA DE TODOS LOS PERIODOS (solo en PDF final) ---------- #
+    ruta_factura_final = getattr(proyecto, 'ruta_foto_final', None)
+    es_avance_final = getattr(avance, 'porcentaje_avance', 0) >= 100
+
+    if es_avance_final:
+        todos_avances_ord = sorted(getattr(proyecto, 'avances', []), key=lambda x: x.semana)
+        base_dir_cons = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        tiene_evidencia = any(
+            getattr(av, 'rutas_fotografias', None) or getattr(av, 'rutas_facturas', None)
+            for av in todos_avances_ord
+        )
+
+        if tiene_evidencia:
+            pdf.add_page()
+            pdf.set_fill_color(0, 51, 102)
+            pdf.rect(0, 0, 210, 20, 'F')
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font('Arial', 'B', 12)
+            pdf.set_xy(10, 5)
+            pdf.cell(0, 10, 'EVIDENCIA CONSOLIDADA DE TODOS LOS PERIODOS', ln=True, align='C')
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(15)
+
+            IMG_W = 88
+            IMG_H = 75
+            MARGIN_LEFT = 10
+            COL_GAP = 7
+            PAGE_BOTTOM = 270
+
+            for av in todos_avances_ord:
+                tipo_av = getattr(av, 'tipo_periodo', 'SEMANA')
+                if tipo_av == 'HORA':
+                    label_av = f'Hora {av.semana}'
+                elif tipo_av == 'DIA':
+                    label_av = f'Dia {av.semana}'
+                else:
+                    label_av = f'Semana {av.semana}'
+
+                rutas_fotos = getattr(av, 'rutas_fotografias', None) or ''
+                rutas_fact  = getattr(av, 'rutas_facturas',   None) or ''
+
+                if not rutas_fotos and not rutas_fact:
+                    continue
+
+                # Sub-encabezado del periodo
+                pdf.set_fill_color(30, 64, 120)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font('Arial', 'B', 9)
+                label_periodo_safe = f'  PERIODO: {label_av.upper()} - {av.porcentaje_avance}% Avance'
+                label_periodo_safe = label_periodo_safe.encode('latin-1', 'replace').decode('latin-1')
+                pdf.cell(0, 8, label_periodo_safe, border=1, fill=True, ln=True)
+                pdf.set_text_color(0, 0, 0)
+                pdf.ln(3)
+
+                # ── Fotografías del periodo ──
+                if rutas_fotos:
+                    rutas_foto_list = [r.strip() for r in rutas_fotos.split(',') if r.strip()]
+                    valid_imgs = []
+                    for foto in rutas_foto_list:
+                        foto_safe = foto.encode('latin-1', 'replace').decode('latin-1').strip()
+                        img_path = os.path.join(base_dir_cons, foto_safe.replace('/', os.sep))
+                        if os.path.exists(img_path):
+                            valid_imgs.append(img_path)
+
+                    if valid_imgs:
+                        pdf.set_font('Arial', 'B', 8)
+                        pdf.set_fill_color(220, 230, 241)
+                        pdf.cell(0, 6, f'  Fotografias Tecnicas ({len(valid_imgs)})', border=1, fill=True, ln=True)
+                        pdf.ln(2)
+                        for i in range(0, len(valid_imgs), 2):
+                            pair = valid_imgs[i:i+2]
+                            if pdf.get_y() + IMG_H > PAGE_BOTTOM:
+                                pdf.add_page()
+                            row_y = pdf.get_y()
+                            for j, img_p in enumerate(pair):
+                                x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
+                                try:
+                                    pdf.image(img_p, x=x_coord, y=row_y, w=IMG_W, h=0)
+                                except Exception as e:
+                                    pdf.set_xy(x_coord, row_y)
+                                    pdf.set_text_color(200, 0, 0)
+                                    pdf.multi_cell(IMG_W, 6, f"(Error: {str(e)[:35]})")
+                                    pdf.set_text_color(0, 0, 0)
+                            pdf.set_y(row_y + IMG_H + 5)
+                        pdf.ln(4)
+
+                # ── Facturas/comprobantes del periodo ──
+                if rutas_fact:
+                    rutas_fac_list = [r.strip() for r in rutas_fact.split(',') if r.strip()]
+                    valid_fac = []
+                    for fac in rutas_fac_list:
+                        fac_safe = fac.encode('latin-1', 'replace').decode('latin-1').strip()
+                        fac_path = os.path.join(base_dir_cons, fac_safe.replace('/', os.sep))
+                        if os.path.exists(fac_path):
+                            valid_fac.append(fac_path)
+
+                    if valid_fac:
+                        pdf.set_font('Arial', 'B', 8)
+                        pdf.set_fill_color(220, 230, 241)
+                        pdf.cell(0, 6, f'  Facturas / Comprobantes ({len(valid_fac)})', border=1, fill=True, ln=True)
+                        pdf.ln(2)
+                        for i in range(0, len(valid_fac), 2):
+                            pair = valid_fac[i:i+2]
+                            if pdf.get_y() + IMG_H > PAGE_BOTTOM:
+                                pdf.add_page()
+                            row_y = pdf.get_y()
+                            for j, fac_p in enumerate(pair):
+                                x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
+                                try:
+                                    pdf.image(fac_p, x=x_coord, y=row_y, w=IMG_W, h=0)
+                                except Exception as e:
+                                    pdf.set_xy(x_coord, row_y)
+                                    pdf.set_text_color(200, 0, 0)
+                                    pdf.multi_cell(IMG_W, 6, f"(Error: {str(e)[:35]})")
+                                    pdf.set_text_color(0, 0, 0)
+                            pdf.set_y(row_y + IMG_H + 5)
+                        pdf.ln(4)
+
+                pdf.ln(3)
+
+    # ---------- ANEXO VII: FACTURA FINAL DE ENTREGA ---------- #
+    if ruta_factura_final and es_avance_final:
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        rutas_list = [r.strip() for r in ruta_factura_final.split(',') if r.strip()]
+        
+        valid_imgs_final = []
+        for r_path in rutas_list:
+            r_path_safe = r_path.encode('latin-1', 'replace').decode('latin-1').strip()
+            full_p = os.path.join(base_dir, r_path_safe.replace('/', os.sep))
+            if os.path.exists(full_p):
+                valid_imgs_final.append(full_p)
+
+        if valid_imgs_final:
+            pdf.add_page()
+            # Encabezado azul oscuro
+            pdf.set_fill_color(0, 51, 102)
+            pdf.rect(0, 0, 210, 20, 'F')
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font('Arial', 'B', 13)
+            pdf.set_xy(10, 5)
+            pdf.cell(0, 10, 'ANEXO VII: FACTURA FINAL DE ENTREGA DEL PROYECTO', ln=True, align='C')
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(15)
+
+            pdf.set_font('Arial', 'B', 9)
+            pdf.set_fill_color(240, 248, 240)
+            pdf.cell(0, 8, f'  Se adjuntan {len(valid_imgs_final)} evidencias de cierre definitivo de la obra.', border=1, ln=True, fill=True)
+            pdf.ln(8)
+
+            for img_p in valid_imgs_final:
+                # Verificar espacio
+                if pdf.get_y() + 120 > PAGE_BOTTOM:
+                    pdf.add_page()
+                
+                start_y = pdf.get_y()
+                try:
+                    # Intentar centrar la imagen
+                    pdf.image(img_p, x=25, w=160, h=0)
+                    new_y = pdf.get_y()
+                    # Si la imagen es pequeña h=0 no actualiza y bien, fpdf a veces es raro
+                    # Forzamos un salto razonable basado en el ancho usado si y no se movió mucho
+                    if new_y - start_y < 10:
+                         pdf.set_y(start_y + 110)
+                except Exception as e:
+                    pdf.set_text_color(200, 0, 0)
+                    pdf.multi_cell(0, 6, f"(Error cargando imagen de cierre: {str(e)[:60]})")
+                    pdf.set_text_color(0, 0, 0)
+                pdf.ln(10)
+
+            pdf.set_font('Arial', 'I', 8)
+            pdf.set_text_color(100, 100, 100)
+            pdf.cell(0, 5, 'Documentacion adjuntada al cierre del proyecto.', ln=True, align='C')
+            pdf.set_text_color(0, 0, 0)
+
     # Guardar en archivo temporal seguro
     fd, temp_path = tempfile.mkstemp(suffix='.pdf')
     os.close(fd)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request, Response
 from sqlalchemy.orm import Session
 import shutil
 import os
@@ -9,9 +9,8 @@ from app.services.pdf_service import crear_pdf_avance
 from app.models.database import get_db
 from app.models import models
 from app.schemas import project_schema
-from fastapi import Request
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from collections import defaultdict
 import time
 import jwt
@@ -218,7 +217,7 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
         raise HTTPException(status_code=500, detail=f"Error al registrar el avance: {str(e)}")
 
 @router.get("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}/descargar-pdf", dependencies=[Depends(get_current_user)])
-async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, regenerar: bool = False, db: Session = Depends(get_db)):
+async def descargar_reporte_pdf(request: Request, proyecto_id: int, avance_id: int, regenerar: bool = False, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     avance = db.query(models.AvanceSemanal).filter(models.AvanceSemanal.id == avance_id, models.AvanceSemanal.proyecto_id == proyecto_id).first()
     
@@ -260,8 +259,15 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, regenerar: boo
 
     # Si ya existe en DB y en disco, servir directamente si no piden regenerar
     if not regenerar and avance.ruta_pdf and os.path.exists(avance.ruta_pdf):
-        print(f"DEBUG: Sirviendo PDF existente para avance {avance.id}")
-        return FileResponse(path=avance.ruta_pdf, filename=nombre_archivo, media_type="application/pdf")
+        print(f"[PDF LOG] Sirviendo PDF en CACHE para avance {avance.id} | path: {avance.ruta_pdf}")
+        with open(avance.ruta_pdf, "rb") as f:
+            pdf_content = f.read()
+        print(f"[PDF LOG] PDF leído correctamente: {len(pdf_content)} bytes")
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{nombre_archivo}"'}
+        )
 
     # Si no existe, generamos los dos textos de IA en paralelo
     import asyncio
@@ -277,22 +283,35 @@ async def descargar_reporte_pdf(proyecto_id: int, avance_id: int, regenerar: boo
     )
     
     # Generar PDF temporal
-    pdf_temp_path = crear_pdf_avance(proyecto, avance, texto_ia, texto_balance_ia, ppto_total_igv)
+    print(f"[PDF LOG] Generando PDF con IA para avance {avance.id}...")
+    try:
+        pdf_temp_path = crear_pdf_avance(proyecto, avance, texto_ia, texto_balance_ia, ppto_total_igv)
+        print(f"[PDF LOG] PDF generado en temp: {pdf_temp_path}")
+    except Exception as pdf_err:
+        import traceback
+        print(f"[PDF ERROR] Avance {avance.id}: {pdf_err}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error generando PDF: {str(pdf_err)}")
     
     # Mover a ruta final y actualizar DB
     import shutil
     shutil.move(pdf_temp_path, target_path)
     avance.ruta_pdf = target_path
     db.commit()
+    print(f"[PDF LOG] PDF movido a destino final: {target_path}")
 
-    return FileResponse(
-        path=target_path, 
-        filename=nombre_archivo,
-        media_type="application/pdf"
+    # Leer y servir
+    with open(target_path, "rb") as f:
+        pdf_content = f.read()
+    print(f"[PDF LOG] PDF listo para enviar: {len(pdf_content)} bytes")
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{nombre_archivo}"'}
     )
 
 @router.get("/api/v1/proyectos/{proyecto_id}/balance-pdf", dependencies=[Depends(get_current_user)])
-async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db)):
+async def descargar_balance_pdf(request: Request, proyecto_id: int, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     
     if not proyecto:
@@ -328,7 +347,19 @@ async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db))
 
     if proyecto.ruta_pdf and os.path.exists(proyecto.ruta_pdf):
         print(f"DEBUG: Sirviendo Balance Global existente para proyecto {proyecto.id}")
-        return FileResponse(path=proyecto.ruta_pdf, filename=nombre_archivo, media_type="application/pdf")
+        with open(proyecto.ruta_pdf, "rb") as f:
+            pdf_content_cache = f.read()
+        origin = request.headers.get("origin", "*")
+        return Response(
+            content=pdf_content_cache,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{nombre_archivo}"',
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            }
+        )
 
     # Si no existe, calcular ppto con IGV para el balance
     costo_directo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
@@ -348,10 +379,18 @@ async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db))
     proyecto.ruta_pdf = target_path
     db.commit()
 
-    return FileResponse(
-        path=target_path, 
-        filename=nombre_archivo,
-        media_type="application/pdf"
+    with open(target_path, "rb") as f:
+        pdf_content = f.read()
+    origin = request.headers.get("origin", "*")
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{nombre_archivo}"',
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        }
     )
 
 @router.post("/api/v1/upload-imagen/", dependencies=[Depends(get_current_user)])
