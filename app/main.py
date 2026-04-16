@@ -53,6 +53,11 @@ def run_migrations():
                 conn.commit()
                 print("✔ Migración aplicada: columna ruta_pdf añadida en proyectos.")
                 
+            if "ruta_foto_final" not in columns_proy:
+                conn.execute(text("ALTER TABLE proyectos ADD COLUMN ruta_foto_final TEXT"))
+                conn.commit()
+                print("✔ Migración aplicada: columna ruta_foto_final añadida en proyectos.")
+                
             result = conn.execute(text("PRAGMA table_info(avances_semanales)"))
             columns = [row[1] for row in result.fetchall()]
             if "tipo_periodo" not in columns:
@@ -74,6 +79,10 @@ def run_migrations():
             if "ruta_pdf" not in columns:
                 conn.execute(text("ALTER TABLE avances_semanales ADD COLUMN ruta_pdf TEXT"))
                 print("✔ Migración aplicada: columna ruta_pdf añadida en avances_semanales.")
+                
+            if "rutas_facturas" not in columns:
+                conn.execute(text("ALTER TABLE avances_semanales ADD COLUMN rutas_facturas TEXT"))
+                print("✔ Migración aplicada: columna rutas_facturas añadida en avances_semanales.")
                 
             # Migraciones para Costos Fijos (Mano Obra) y Variables (Materiales)
             res_mo = conn.execute(text("PRAGMA table_info(mano_de_obra)"))

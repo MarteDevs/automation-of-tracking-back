@@ -179,8 +179,57 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     else:
         pdf.multi_cell(0, 6, "(No se insertaron imagenes fotograficas para esta semana).")
 
-        
+    # --- Facturas ---
+    pdf.ln(5)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 8, ' 6. EVIDENCIA DE FACTURAS Y COMPROBANTES', ln=True)
+    pdf.set_font('Arial', '', 10)
     
+    if getattr(avance, 'rutas_facturas', None):
+        rutas_fac = [r.strip() for r in avance.rutas_facturas.split(',') if r.strip()]
+        pdf.multi_cell(0, 6, f"Se han adjuntado {len(rutas_fac)} facturas/comprobantes.")
+        pdf.ln(5)
+        
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
+        # Compartimos variables de tamaño pero las recalculamos para este bucle
+        IMG_W = 88
+        IMG_H = 75
+        MARGIN_LEFT = 10
+        COL_GAP = 7
+        PAGE_BOTTOM = 270
+        
+        valid_fac = []
+        for foto in rutas_fac:
+            foto_safe = foto.encode('latin-1', 'replace').decode('latin-1').strip()
+            img_path = os.path.join(base_dir, foto_safe.replace('/', os.sep))
+            if os.path.exists(img_path):
+                valid_fac.append(img_path)
+                
+        for i in range(0, len(valid_fac), 2):
+            pair = valid_fac[i:i+2]
+            if pdf.get_y() + IMG_H > PAGE_BOTTOM:
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 10)
+                pdf.set_fill_color(220, 230, 241)
+                pdf.cell(0, 7, ' (continuacion - Facturas y Comprobantes)', border=1, ln=True, fill=True)
+                pdf.ln(4)
+            
+            row_y = pdf.get_y()
+            for j, img_path in enumerate(pair):
+                x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
+                try:
+                    pdf.image(img_path, x=x_coord, y=row_y, w=IMG_W, h=0)
+                except Exception as e:
+                    pdf.set_xy(x_coord, row_y)
+                    pdf.set_text_color(200, 0, 0)
+                    pdf.multi_cell(IMG_W, 6, f"(Error imagen {i+j+1}: {str(e)[:40]})")
+                    pdf.set_text_color(0, 0, 0)
+            
+            pdf.set_y(row_y + IMG_H + 5)
+        pdf.ln(5)
+    else:
+        pdf.multi_cell(0, 6, "(No se insertaron facturas o comprobantes).")
 
     # ------------------ PÁGINA 2: ANEXO DE CURVA S ------------------ #
     pdf.add_page()
@@ -904,6 +953,28 @@ def crear_pdf_balance_general(proyecto, texto_ia='', ppto_total_igv=0.0) -> str:
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(0, 10, '________________________', ln=True, align='C')
     pdf.cell(0, 5, 'Firma y Sello (Administrador)', ln=True, align='C')
+    
+    # ------------------ ANEXO VII: FOTO FINAL DEL PROYECTO ---------------- #
+    if getattr(proyecto, 'ruta_foto_final', None):
+        img_final = getattr(proyecto, 'ruta_foto_final')
+        if img_final:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            img_path = os.path.join(base_dir, img_final.replace('/', os.sep))
+            if os.path.exists(img_path):
+                pdf.add_page()
+                pdf.set_text_color(0, 51, 102)
+                pdf.set_font('Arial', 'B', 12)
+                pdf.cell(0, 10, 'ANEXO VII: FOTOGRAFIA FINAL DEL PROYECTO', ln=True, align='C')
+                pdf.set_text_color(0, 0, 0)
+                pdf.ln(10)
+                
+                try:
+                    # w=160 para imagen apaisada y centrada horizontalmente
+                    pdf.image(img_path, x=25, w=160, h=0)
+                except Exception as e:
+                    pdf.set_text_color(200, 0, 0)
+                    pdf.multi_cell(0, 6, f"(Error cargando imagen final: {str(e)[:40]})")
+                    pdf.set_text_color(0, 0, 0)
     
     fd, temp_path = tempfile.mkstemp(suffix='.pdf')
     os.close(fd)

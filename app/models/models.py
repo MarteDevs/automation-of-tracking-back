@@ -14,6 +14,7 @@ class Proyecto(Base):
     semanas_estimadas = Column(Integer, default=0)
     tipo_duracion = Column(String, default="SEMANAS", server_default="SEMANAS", nullable=False)
     ruta_pdf = Column(String, nullable=True)
+    ruta_foto_final = Column(String, nullable=True)
 
     # Relaciones: Un proyecto tiene mucha mano de obra, materiales y avances
     mano_de_obra = relationship("ManoObra", back_populates="proyecto", cascade="all, delete-orphan")
@@ -59,6 +60,7 @@ class AvanceSemanal(Base):
     porcentaje_avance = Column(Float)
     observaciones = Column(String, nullable=True)
     rutas_fotografias = Column(String, nullable=True) # JSON o URL separados por comas
+    rutas_facturas = Column(String, nullable=True)
     tipo_periodo = Column(String, default="SEMANA", server_default="SEMANA", nullable=False)
     fecha_fin = Column(String, nullable=True)
     dias_trabajados = Column(Float, default=0)

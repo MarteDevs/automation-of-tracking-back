@@ -12,6 +12,10 @@ class ProyectoBase(BaseModel):
     semanas_estimadas: Optional[int] = 0
     tipo_duracion: Optional[str] = "SEMANAS"
     ruta_pdf: Optional[str] = None
+    ruta_foto_final: Optional[str] = None
+
+class FotoFinalRequest(BaseModel):
+    ruta_foto: str
 
 class ProyectoCreate(ProyectoBase):
     pass
@@ -61,6 +65,7 @@ class AvanceSemanalBase(BaseModel):
     porcentaje_avance: float
     observaciones: Optional[str] = None
     rutas_fotografias: Optional[str] = None
+    rutas_facturas: Optional[str] = None
     tipo_periodo: str = "SEMANA"  # SEMANA, DIA o HORA
     fecha_fin: Optional[str] = None
     dias_trabajados: Optional[float] = 0

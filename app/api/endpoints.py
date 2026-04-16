@@ -187,6 +187,7 @@ def crear_avance_semanal(proyecto_id: int, avance: project_schema.AvanceSemanalC
         porcentaje_avance=avance.porcentaje_avance,
         observaciones=avance.observaciones,
         rutas_fotografias=avance.rutas_fotografias,
+        rutas_facturas=avance.rutas_facturas,
         tipo_periodo=avance.tipo_periodo,
         fecha_fin=avance.fecha_fin,
         dias_trabajados=avance.dias_trabajados
@@ -370,8 +371,8 @@ async def upload_imagen(files: List[UploadFile] = File(...)):
         save_path = os.path.join(base_dir, "uploads", "evidencias", filename)
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         
-        # Verificar tamaño individual (Max 10MB)
-        MAX_IMG_SIZE = 10 * 1024 * 1024
+        # Verificar tamaño individual (Max 50MB)
+        MAX_IMG_SIZE = 50 * 1024 * 1024
         file_size = 0
         
         # Obtener tamaño sin leer todo el contenido a memoria si es posible
@@ -395,6 +396,18 @@ async def upload_imagen(files: List[UploadFile] = File(...)):
         raise HTTPException(status_code=400, detail="No se guardó material grafico válido (solo admite JPG/PNG).")
         
     return {"ruta_fotografias": ",".join(rutas)}
+
+@router.put("/api/v1/proyectos/{proyecto_id}/foto-final", response_model=project_schema.ProyectoResponse, dependencies=[Depends(get_current_user)])
+def actualizar_foto_final(proyecto_id: int, request: project_schema.FotoFinalRequest, db: Session = Depends(get_db)):
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    
+    proyecto.ruta_foto_final = request.ruta_foto
+    proyecto.ruta_pdf = None # Invalidar PDF
+    db.commit()
+    db.refresh(proyecto)
+    return proyecto
 
 @router.delete("/api/v1/proyectos/{proyecto_id}/avances/{avance_id}", dependencies=[Depends(get_current_user)])
 def eliminar_avance_semanal(proyecto_id: int, avance_id: int, db: Session = Depends(get_db)):
