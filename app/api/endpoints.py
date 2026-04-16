@@ -358,8 +358,8 @@ async def descargar_balance_pdf(proyecto_id: int, db: Session = Depends(get_db))
 async def upload_imagen(files: List[UploadFile] = File(...)):
     rutas = []
     
-    # Procesar max 4 iteraciones de seguridad
-    archivos_procesables = files[:4]
+    # Procesar max 15 iteraciones de seguridad
+    archivos_procesables = files[:15]
     
     for file in archivos_procesables:
         ext = file.filename.split('.')[-1].lower()
