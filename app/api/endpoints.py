@@ -532,6 +532,34 @@ def eliminar_mano_obra(item_id: int, db: Session = Depends(get_db)):
 
 # --- ENDPOINTS PARA MATERIALES ---
 
+@router.post("/api/v1/proyectos/{proyecto_id}/materiales/", response_model=project_schema.MaterialEquipoResponse, dependencies=[Depends(get_current_user)])
+def crear_material(proyecto_id: int, material: project_schema.MaterialEquipoCreate, db: Session = Depends(get_db)):
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    
+    nuevo_material = models.MaterialEquipo(
+        proyecto_id=proyecto_id,
+        descripcion=material.descripcion,
+        categoria=material.categoria or "Materiales",
+        cantidad=material.cantidad,
+        unidad=material.unidad,
+        precio_unitario=material.precio_unitario or 0.0,
+        dias=material.dias or 1.0
+    )
+    
+    # Recalcular total
+    nuevo_material.total = nuevo_material.cantidad * nuevo_material.precio_unitario * nuevo_material.dias
+    
+    # Invalidar Balance Global
+    proyecto.ruta_pdf = None
+    
+    db.add(nuevo_material)
+    db.commit()
+    db.refresh(nuevo_material)
+    return nuevo_material
+
+
 @router.put("/api/v1/materiales/{item_id}", response_model=project_schema.MaterialEquipoResponse, dependencies=[Depends(get_current_user)])
 def actualizar_material(item_id: int, update: project_schema.MaterialEquipoUpdate, db: Session = Depends(get_db)):
     print(f"DEBUG: Actualizando Material {item_id} con datos: {update}")

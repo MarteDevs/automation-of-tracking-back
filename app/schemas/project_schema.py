@@ -41,6 +41,16 @@ class MaterialEquipoUpdate(BaseModel):
     precio_unitario: Optional[float] = None
     dias: Optional[float] = None
 
+class MaterialEquipoCreate(BaseModel):
+    descripcion: str
+    categoria: Optional[str] = "Materiales"
+    cantidad: float
+    unidad: str
+    precio_unitario: Optional[float] = 0.0
+    dias: Optional[float] = 1.0
+    total: Optional[float] = 0.0
+
+
 
 class ManoObraBase(BaseModel):
     descripcion: str
