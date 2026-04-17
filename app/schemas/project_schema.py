@@ -50,6 +50,16 @@ class MaterialEquipoCreate(BaseModel):
     dias: Optional[float] = 1.0
     total: Optional[float] = 0.0
 
+class MaterialCatalogoResponse(BaseModel):
+    descripcion: str
+    unidad: Optional[str] = ""
+    categoria: Optional[str] = "Materiales"
+    precio_sugerido: Optional[float] = 0.0
+    
+    class Config:
+        from_attributes = True
+
+
 
 
 class ManoObraBase(BaseModel):

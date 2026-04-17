@@ -532,7 +532,35 @@ def eliminar_mano_obra(item_id: int, db: Session = Depends(get_db)):
 
 # --- ENDPOINTS PARA MATERIALES ---
 
+@router.get("/api/v1/materiales/catalogo/", response_model=List[project_schema.MaterialCatalogoResponse], dependencies=[Depends(get_current_user)])
+def obtener_catalogo_materiales(db: Session = Depends(get_db)):
+    """Retorna una lista única de materiales/insumos usados en proyectos anteriores como sugerencias."""
+    from sqlalchemy import func
+    
+    # Agrupamos por descripción y unidad para dar sugerencias razonables
+    # Sugerimos el precio unitario máximo encontrado para ese material
+    query = db.query(
+        models.MaterialEquipo.descripcion,
+        models.MaterialEquipo.unidad,
+        models.MaterialEquipo.categoria,
+        func.max(models.MaterialEquipo.precio_unitario).label("precio_sugerido")
+    ).group_by(
+        models.MaterialEquipo.descripcion, 
+        models.MaterialEquipo.unidad,
+        models.MaterialEquipo.categoria
+    ).order_by(models.MaterialEquipo.descripcion.asc()).all()
+    
+    return [
+        {
+            "descripcion": q.descripcion,
+            "unidad": q.unidad,
+            "categoria": q.categoria,
+            "precio_sugerido": q.precio_sugerido
+        } for q in query
+    ]
+
 @router.post("/api/v1/proyectos/{proyecto_id}/materiales/", response_model=project_schema.MaterialEquipoResponse, dependencies=[Depends(get_current_user)])
+
 def crear_material(proyecto_id: int, material: project_schema.MaterialEquipoCreate, db: Session = Depends(get_db)):
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == proyecto_id).first()
     if not proyecto:
