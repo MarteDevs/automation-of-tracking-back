@@ -145,13 +145,23 @@ REGLA CRITICA: Para el campo "categoria", asigna un titulo claro y legible como 
         print(f"Error al procesar el documento con OpenAI: {e}")
         return None
 
-async def generar_resumen_ejecutivo_avance(nombre_proyecto, semana, porcentaje, observaciones):
+async def generar_resumen_ejecutivo_avance(nombre_proyecto, semana, porcentaje, observaciones, tipo_periodo="SEMANA"):
     """Genera un reporte profesional usando IA de forma asíncrona."""
     try:
         obs_texto = observaciones if observaciones else "Ninguna novedad técnica reportada para este periodo."
+        
+        # Determinar etiquetas según el tipo de periodo
+        adj_periodo = "semanal"
+        if tipo_periodo == "HORA": adj_periodo = "por horas"
+        elif tipo_periodo == "DIA": adj_periodo = "diario"
+        
+        label_periodo = "Semana"
+        if tipo_periodo == "HORA": label_periodo = "Hora"
+        elif tipo_periodo == "DIA": label_periodo = "Día"
+
         prompt = f"""
-        Eres un Ingeniero Residente. Redacta un "RESUMEN EJECUTIVO" muy formal (un solo párrafo sólido) para el informe semanal en PDF.
-        Datos: Proyecto {nombre_proyecto}, Semana N° {semana}, Progreso {porcentaje}%, Obs: {obs_texto}.
+        Eres un Ingeniero Residente. Redacta un "RESUMEN EJECUTIVO" muy formal (un solo párrafo sólido) para el informe {adj_periodo} en PDF.
+        Datos: Proyecto {nombre_proyecto}, {label_periodo} N° {semana}, Progreso {porcentaje}%, Obs: {obs_texto}.
         Reglas: Cero saludos, un solo párrafo fluido, tono corporativo.
         """
         response = await client.chat.completions.create(
@@ -164,15 +174,21 @@ async def generar_resumen_ejecutivo_avance(nombre_proyecto, semana, porcentaje, 
         print(f"Error AI resumen: {e}")
         return f"En esta semana {semana}, se alcanzó un avance del {porcentaje}%. Las actividades transcurren sin detención. {obs_texto}"
 
-async def generar_interpretacion_balance(nombre_proyecto, semana, ppto_total_igv, total_gast, total_ppto_mat, saldo_global):
+async def generar_interpretacion_balance(nombre_proyecto, semana, ppto_total_igv, total_gast, total_ppto_mat, saldo_global, tipo_periodo="SEMANA"):
     """Genera una interpretación financiera del balance de materiales usando IA."""
     try:
         ahorro_porc = ((total_ppto_mat - total_gast) / total_ppto_mat * 100) if total_ppto_mat > 0 else 0
+        
+        label_periodo = "semana"
+        if tipo_periodo == "HORA": label_periodo = "hora"
+        elif tipo_periodo == "DIA": label_periodo = "día"
+        elif tipo_periodo == "GLOBAL": label_periodo = "cierre"
+
         prompt = f"""
 Eres un analista financiero de proyectos de construcción metalmecánica.
 Redacta UN SOLO PÁRRAFO formal (máximo 5 líneas) interpretando el siguiente balance de materiales. Tono profesional y concreto.
 
-Datos del Proyecto "{nombre_proyecto}" al corte de la semana {semana}:
+Datos del Proyecto "{nombre_proyecto}" al corte de la {label_periodo} {semana}:
 - Presupuesto Total del Proyecto (con IGV): S/ {ppto_total_igv:,.2f}
 - Presupuesto Asignado a Materiales: S/ {total_ppto_mat:,.2f}
 - Materiales Gastados (acumulado): S/ {total_gast:,.2f}

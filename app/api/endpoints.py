@@ -274,11 +274,13 @@ async def descargar_reporte_pdf(request: Request, proyecto_id: int, avance_id: i
     texto_ia, texto_balance_ia = await asyncio.gather(
         generar_resumen_ejecutivo_avance(
             proyecto.nombre_proyecto, avance.semana,
-            avance.porcentaje_avance, avance.observaciones or ""
+            avance.porcentaje_avance, avance.observaciones or "",
+            tipo_periodo=getattr(avance, 'tipo_periodo', 'SEMANA')
         ),
         generar_interpretacion_balance(
             proyecto.nombre_proyecto, avance.semana,
-            ppto_total_igv, total_gast, total_ppto_mat, saldo_global
+            ppto_total_igv, total_gast, total_ppto_mat, saldo_global,
+            tipo_periodo=getattr(avance, 'tipo_periodo', 'SEMANA')
         )
     )
     
@@ -366,10 +368,10 @@ async def descargar_balance_pdf(request: Request, proyecto_id: int, db: Session 
     ppto_total_igv = costo_directo * 1.15 * 1.18
 
     # IA interpretation
-    from app.api.endpoints import generar_interpretacion_balance
     texto_ia = await generar_interpretacion_balance(
         proyecto.nombre_proyecto, "FINAL/ACUMULADO",
-        ppto_total_igv, total_gast, total_ppto_mat, saldo_global
+        ppto_total_igv, total_gast, total_ppto_mat, saldo_global,
+        tipo_periodo="GLOBAL"
     )
 
     pdf_temp_path = crear_pdf_balance_general(proyecto, texto_ia, ppto_total_igv)
