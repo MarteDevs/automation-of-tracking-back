@@ -27,87 +27,55 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# ── Migración automática: añadir columna tipo_periodo si no existe ──
+# ── Migración automática: verificador de esquema robusto ──
 def run_migrations():
     from sqlalchemy import text
+    
+    def column_exists(conn, table_name, column_name):
+        res = conn.execute(text(f"PRAGMA table_info({table_name})"))
+        columns = [row[1] for row in res.fetchall()]
+        return column_name in columns
+
+    def add_column_if_not_exists(conn, table_name, column_name, column_def):
+        if not column_exists(conn, table_name, column_name):
+            try:
+                conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_def}"))
+                conn.commit()
+                print(f"✔ Migración aplicada: columna {column_name} añadida en {table_name}.")
+            except Exception as e:
+                print(f"⚠ Error al añadir {column_name} en {table_name}: {e}")
+        else:
+            # print(f"DEBUG: Columna {column_name} ya existe en {table_name}.")
+            pass
+
     with engine.connect() as conn:
         try:
-            # Verificar si la columna ya existe en SQLite
-            result_proy = conn.execute(text("PRAGMA table_info(proyectos)"))
-            columns_proy = [row[1] for row in result_proy.fetchall()]
-            if "tipo_duracion" not in columns_proy:
-                conn.execute(text(
-                    "ALTER TABLE proyectos ADD COLUMN tipo_duracion VARCHAR DEFAULT 'SEMANAS' NOT NULL"
-                ))
-                conn.commit()
-                print("✔ Migración aplicada: columna tipo_duracion añadida en proyectos.")
-                
-            if "otros_porcentaje" not in columns_proy:
-                conn.execute(text(
-                    "ALTER TABLE proyectos ADD COLUMN otros_porcentaje REAL DEFAULT 5.0"
-                ))
-                conn.commit()
-                print("✔ Migración aplicada: columna otros_porcentaje añadida en proyectos.")
+            # --- Tabla Proyectos ---
+            add_column_if_not_exists(conn, "proyectos", "tipo_duracion", "VARCHAR DEFAULT 'SEMANAS' NOT NULL")
+            add_column_if_not_exists(conn, "proyectos", "otros_porcentaje", "REAL DEFAULT 5.0")
+            add_column_if_not_exists(conn, "proyectos", "ruta_pdf", "TEXT")
+            add_column_if_not_exists(conn, "proyectos", "ruta_foto_final", "TEXT")
 
-            if "ruta_pdf" not in columns_proy:
-                conn.execute(text("ALTER TABLE proyectos ADD COLUMN ruta_pdf TEXT"))
-                conn.commit()
-                print("✔ Migración aplicada: columna ruta_pdf añadida en proyectos.")
-                
-            if "ruta_foto_final" not in columns_proy:
-                conn.execute(text("ALTER TABLE proyectos ADD COLUMN ruta_foto_final TEXT"))
-                conn.commit()
-                print("✔ Migración aplicada: columna ruta_foto_final añadida en proyectos.")
-                
-            result = conn.execute(text("PRAGMA table_info(avances_semanales)"))
-            columns = [row[1] for row in result.fetchall()]
-            if "tipo_periodo" not in columns:
-                conn.execute(text(
-                    "ALTER TABLE avances_semanales ADD COLUMN tipo_periodo VARCHAR DEFAULT 'SEMANA' NOT NULL"
-                ))
-                print("✔ Migración aplicada: columna tipo_periodo añadida.")
-            if "fecha_fin" not in columns:
-                conn.execute(text(
-                    "ALTER TABLE avances_semanales ADD COLUMN fecha_fin VARCHAR"
-                ))
-                print("✔ Migración aplicada: columna fecha_fin añadida.")
-            if "dias_trabajados" not in columns:
-                conn.execute(text(
-                    "ALTER TABLE avances_semanales ADD COLUMN dias_trabajados REAL DEFAULT 0"
-                ))
-                print("✔ Migración aplicada: columna dias_trabajados añadida.")
+            # --- Tabla Avances Semanales ---
+            add_column_if_not_exists(conn, "avances_semanales", "tipo_periodo", "VARCHAR DEFAULT 'SEMANA' NOT NULL")
+            add_column_if_not_exists(conn, "avances_semanales", "fecha_fin", "VARCHAR")
+            add_column_if_not_exists(conn, "avances_semanales", "dias_trabajados", "REAL DEFAULT 0")
+            add_column_if_not_exists(conn, "avances_semanales", "ruta_pdf", "TEXT")
+            add_column_if_not_exists(conn, "avances_semanales", "rutas_facturas", "TEXT")
+
+            # --- Tabla Mano de Obra ---
+            add_column_if_not_exists(conn, "mano_de_obra", "categoria", "VARCHAR DEFAULT 'Mano de Obra'")
+            add_column_if_not_exists(conn, "mano_de_obra", "unidad", "VARCHAR DEFAULT ''")
+            add_column_if_not_exists(conn, "mano_de_obra", "dias", "REAL DEFAULT 1.0")
+
+            # --- Tabla Materiales Equipos ---
+            add_column_if_not_exists(conn, "materiales_equipos", "categoria", "VARCHAR DEFAULT 'Materiales'")
+            add_column_if_not_exists(conn, "materiales_equipos", "precio_unitario", "REAL DEFAULT 0.0")
+            add_column_if_not_exists(conn, "materiales_equipos", "dias", "REAL DEFAULT 1.0")
             
-            if "ruta_pdf" not in columns:
-                conn.execute(text("ALTER TABLE avances_semanales ADD COLUMN ruta_pdf TEXT"))
-                print("✔ Migración aplicada: columna ruta_pdf añadida en avances_semanales.")
-                
-            if "rutas_facturas" not in columns:
-                conn.execute(text("ALTER TABLE avances_semanales ADD COLUMN rutas_facturas TEXT"))
-                print("✔ Migración aplicada: columna rutas_facturas añadida en avances_semanales.")
-                
-            # Migraciones para Costos Fijos (Mano Obra) y Variables (Materiales)
-            res_mo = conn.execute(text("PRAGMA table_info(mano_de_obra)"))
-            cols_mo = [row[1] for row in res_mo.fetchall()]
-            if "categoria" not in cols_mo:
-                conn.execute(text("ALTER TABLE mano_de_obra ADD COLUMN categoria VARCHAR DEFAULT 'Mano de Obra'"))
-                conn.execute(text("ALTER TABLE mano_de_obra ADD COLUMN unidad VARCHAR DEFAULT ''"))
-                conn.execute(text("ALTER TABLE mano_de_obra ADD COLUMN dias REAL DEFAULT 1.0"))
-                print("✔ Migración aplicada: columnas extendidas en mano_de_obra.")
-            
-            res_mat = conn.execute(text("PRAGMA table_info(materiales_equipos)"))
-            cols_mat = [row[1] for row in res_mat.fetchall()]
-            if "categoria" not in cols_mat:
-                conn.execute(text("ALTER TABLE materiales_equipos ADD COLUMN categoria VARCHAR DEFAULT 'Materiales'"))
-                conn.execute(text("ALTER TABLE materiales_equipos ADD COLUMN precio_unitario REAL DEFAULT 0.0"))
-                conn.execute(text("ALTER TABLE materiales_equipos ADD COLUMN dias REAL DEFAULT 1.0"))
-                print("✔ Migración aplicada: columnas extendidas en materiales_equipos.")
-            conn.commit()
-            if any(col not in columns for col in ["tipo_periodo", "fecha_fin", "dias_trabajados"]):
-                conn.commit()
-            else:
-                print("✔ Columnas validadas. No requieren migración extra.")
+            print("✔ Verificación de esquema completada con éxito.")
         except Exception as e:
-            print(f"⚠ Error en migración: {e}")
+            print(f"⚠ Error general en la verificación de esquema: {e}")
 
 run_migrations()
 
