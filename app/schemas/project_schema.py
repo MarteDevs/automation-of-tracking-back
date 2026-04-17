@@ -25,6 +25,23 @@ class ProyectoUpdate(BaseModel):
     tipo_duracion: str
     fecha: str
 
+class ManoObraUpdate(BaseModel):
+    descripcion: Optional[str] = None
+    categoria: Optional[str] = None
+    unidad: Optional[str] = None
+    cantidad_trabajadores: Optional[float] = None
+    precio_unitario: Optional[float] = None
+    dias: Optional[float] = None
+
+class MaterialEquipoUpdate(BaseModel):
+    descripcion: Optional[str] = None
+    categoria: Optional[str] = None
+    cantidad: Optional[float] = None
+    unidad: Optional[str] = None
+    precio_unitario: Optional[float] = None
+    dias: Optional[float] = None
+
+
 class ManoObraBase(BaseModel):
     descripcion: str
     categoria: Optional[str] = "Mano de Obra"

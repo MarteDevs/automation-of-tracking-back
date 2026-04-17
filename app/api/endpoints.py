@@ -486,4 +486,93 @@ def eliminar_proyecto(proyecto_id: int, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error al eliminar el proyecto: {str(e)}")
 
+# --- ENDPOINTS PARA MANO DE OBRA ---
+
+@router.put("/api/v1/mano-de-obra/{item_id}", response_model=project_schema.ManoObraResponse, dependencies=[Depends(get_current_user)])
+def actualizar_mano_obra(item_id: int, update: project_schema.ManoObraUpdate, db: Session = Depends(get_db)):
+    print(f"DEBUG: Actualizando ManoObra {item_id} con datos: {update}")
+    item = db.query(models.ManoObra).filter(models.ManoObra.id == item_id).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Ítem de mano de obra no encontrado")
+    
+    # Actualizar campos permitidos
+    if update.descripcion is not None: item.descripcion = update.descripcion
+    if update.categoria is not None: item.categoria = update.categoria
+    if update.unidad is not None: item.unidad = update.unidad
+    if update.cantidad_trabajadores is not None: item.cantidad_trabajadores = update.cantidad_trabajadores
+    if update.precio_unitario is not None: item.precio_unitario = update.precio_unitario
+    if update.dias is not None: item.dias = update.dias
+    
+    # Recalcular total del ítem
+    item.total = (item.cantidad_trabajadores or 0) * (item.precio_unitario or 0) * (item.dias or 1)
+    
+    # Invalidar Balance Global del proyecto asociado
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == item.proyecto_id).first()
+    if proyecto:
+        proyecto.ruta_pdf = None
+
+    db.commit()
+    db.refresh(item)
+    return item
+
+@router.delete("/api/v1/mano-de-obra/{item_id}", dependencies=[Depends(get_current_user)])
+def eliminar_mano_obra(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(models.ManoObra).filter(models.ManoObra.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Ítem de mano de obra no encontrado")
+
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == item.proyecto_id).first()
+    if proyecto:
+        proyecto.ruta_pdf = None
+
+    db.delete(item)
+    db.commit()
+    return {"mensaje": "Ítem de mano de obra eliminado"}
+
+# --- ENDPOINTS PARA MATERIALES ---
+
+@router.put("/api/v1/materiales/{item_id}", response_model=project_schema.MaterialEquipoResponse, dependencies=[Depends(get_current_user)])
+def actualizar_material(item_id: int, update: project_schema.MaterialEquipoUpdate, db: Session = Depends(get_db)):
+    print(f"DEBUG: Actualizando Material {item_id} con datos: {update}")
+    item = db.query(models.MaterialEquipo).filter(models.MaterialEquipo.id == item_id).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Material o equipo no encontrado")
+    
+    # Actualizar campos permitidos
+    if update.descripcion is not None: item.descripcion = update.descripcion
+    if update.categoria is not None: item.categoria = update.categoria
+    if update.unidad is not None: item.unidad = update.unidad
+    if update.cantidad is not None: item.cantidad = update.cantidad
+    if update.precio_unitario is not None: item.precio_unitario = update.precio_unitario
+    if update.dias is not None: item.dias = update.dias
+    
+    # Recalcular total del ítem
+    item.total = (item.cantidad or 0) * (item.precio_unitario or 0) * (item.dias or 1)
+    
+    # Invalidar Balance Global del proyecto asociado
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == item.proyecto_id).first()
+    if proyecto:
+        proyecto.ruta_pdf = None
+
+    db.commit()
+    db.refresh(item)
+    return item
+
+@router.delete("/api/v1/materiales/{item_id}", dependencies=[Depends(get_current_user)])
+def eliminar_material(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(models.MaterialEquipo).filter(models.MaterialEquipo.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Material o equipo no encontrado")
+
+    proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == item.proyecto_id).first()
+    if proyecto:
+        proyecto.ruta_pdf = None
+
+    db.delete(item)
+    db.commit()
+    return {"mensaje": "Material o equipo eliminado"}
+
+
 
