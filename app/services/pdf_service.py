@@ -41,7 +41,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(40, 8, 'Costo / Prto:', border=1)
     pdf.set_font('Arial', '', 10)
-    pdf.cell(0, 8, f' {proyecto.costo_total} PEN', border=1, ln=True)
+    pdf.cell(0, 8, f' {ppto_total_igv:,.2f} PEN', border=1, ln=True)
     
     pdf.ln(5)
     
