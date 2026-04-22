@@ -722,6 +722,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         # Fila de Totales Generales
         pdf.set_font('Arial', 'B', 8)
         pdf.set_fill_color(240, 240, 240)
+        pdf.set_text_color(0, 0, 0) # <--- Restaurar a negro explícitamente
         pdf.cell(65 + 14 + 14 + 15, 6, ' TOTALES:', align='R', border=1, fill=True)
         pdf.cell(22, 6, f' {total_ppto_mat_vi:,.2f}', align='R', border=1, fill=True)
         pdf.cell(22, 6, f' {total_gast_mat_vi:,.2f}', align='R', border=1, fill=True)
