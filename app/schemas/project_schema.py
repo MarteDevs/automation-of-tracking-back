@@ -21,9 +21,11 @@ class ProyectoCreate(ProyectoBase):
     pass
 
 class ProyectoUpdate(BaseModel):
-    semanas_estimadas: int
-    tipo_duracion: str
-    fecha: str
+    semanas_estimadas: Optional[int] = None
+    tipo_duracion: Optional[str] = None
+    fecha: Optional[str] = None
+    utilidad_porcentaje: Optional[float] = None
+    otros_porcentaje: Optional[float] = None
 
 class ManoObraUpdate(BaseModel):
     descripcion: Optional[str] = None

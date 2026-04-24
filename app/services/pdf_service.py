@@ -433,9 +433,11 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     costo_mo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', []))
     costo_mat = sum(mat.total for mat in getattr(proyecto, 'materiales', []))
     costo_directo = costo_mo + costo_mat
-    # Porcentajes forzados a 10% utilidad y 5% otros (15% total) por regla de negocio
-    utilidad_porc = 0.10
-    otros_porc = 0.05
+    # Porcentajes obtenidos del proyecto de forma dinámica
+    util_porc_val = getattr(proyecto, 'utilidad_porcentaje', 10.0) or 10.0
+    utilidad_porc = util_porc_val / 100.0 if util_porc_val > 1 else util_porc_val
+    otros_porc_val = getattr(proyecto, 'otros_porcentaje', 5.0) or 5.0
+    otros_porc = otros_porc_val / 100.0 if otros_porc_val > 1 else otros_porc_val
     
     utilidad_moneda = costo_directo * utilidad_porc
     otros_moneda = costo_directo * otros_porc

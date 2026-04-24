@@ -61,9 +61,17 @@ def actualizar_configuracion_proyecto(proyecto_id: int, config: project_schema.P
     if not proyecto:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     
-    proyecto.semanas_estimadas = config.semanas_estimadas
-    proyecto.tipo_duracion = config.tipo_duracion
-    proyecto.fecha = config.fecha
+    if config.semanas_estimadas is not None:
+        proyecto.semanas_estimadas = config.semanas_estimadas
+    if config.tipo_duracion is not None:
+        proyecto.tipo_duracion = config.tipo_duracion
+    if config.fecha is not None:
+        proyecto.fecha = config.fecha
+    if config.utilidad_porcentaje is not None:
+        proyecto.utilidad_porcentaje = config.utilidad_porcentaje
+    if config.otros_porcentaje is not None:
+        proyecto.otros_porcentaje = config.otros_porcentaje
+        
     db.commit()
     db.refresh(proyecto)
     return proyecto
@@ -243,7 +251,14 @@ async def descargar_reporte_pdf(request: Request, proyecto_id: int, avance_id: i
 
     # Presupuesto total del proyecto con IGV
     costo_directo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
-    ppto_total_igv = costo_directo * 1.15 * 1.18  # 15% indirectos + 18% IGV
+    
+    util_porc_val = getattr(proyecto, 'utilidad_porcentaje', 10.0) or 10.0
+    util_porc = util_porc_val / 100.0 if util_porc_val > 1 else util_porc_val
+    otros_porc_val = getattr(proyecto, 'otros_porcentaje', 5.0) or 5.0
+    otros_porc = otros_porc_val / 100.0 if otros_porc_val > 1 else otros_porc_val
+    indirectos_pct = util_porc + otros_porc
+    
+    ppto_total_igv = costo_directo * (1 + indirectos_pct) * 1.18
 
     # --- Lógica de Persistencia ---
     label_periodo = "Semana" if getattr(avance, 'tipo_periodo', 'SEMANA') == 'SEMANA' else "Dia"
@@ -365,7 +380,14 @@ async def descargar_balance_pdf(request: Request, proyecto_id: int, db: Session 
 
     # Si no existe, calcular ppto con IGV para el balance
     costo_directo = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
-    ppto_total_igv = costo_directo * 1.15 * 1.18
+    
+    util_porc_val = getattr(proyecto, 'utilidad_porcentaje', 10.0) or 10.0
+    util_porc = util_porc_val / 100.0 if util_porc_val > 1 else util_porc_val
+    otros_porc_val = getattr(proyecto, 'otros_porcentaje', 5.0) or 5.0
+    otros_porc = otros_porc_val / 100.0 if otros_porc_val > 1 else otros_porc_val
+    indirectos_pct = util_porc + otros_porc
+    
+    ppto_total_igv = costo_directo * (1 + indirectos_pct) * 1.18
 
     # IA interpretation
     texto_ia = await generar_interpretacion_balance(
