@@ -772,10 +772,14 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
             txt_ia_safe = texto_balance_ia.encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(0, 5, f' {txt_ia_safe}', border=1, align='J')
 
-    pdf.ln(25)
-    
     # Firmas
     # Las firmas ahora estarán SIEMPRE obligatoriamente en la estructura final de todo el documento
+    if pdf.get_y() > 240:
+        pdf.add_page()
+        pdf.ln(10)
+    else:
+        pdf.ln(25)
+        
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(0, 10, '________________________', ln=True, align='C')
     pdf.cell(0, 5, 'Firma y Sello', ln=True, align='C')
@@ -1170,7 +1174,12 @@ def crear_pdf_balance_general(proyecto, texto_ia='', ppto_total_igv=0.0) -> str:
         txt_safe = texto_ia.encode('latin-1', 'replace').decode('latin-1')
         pdf.multi_cell(0, 6, f' {txt_safe}', border=1, fill=True, align='J')
 
-    pdf.ln(20)
+    if pdf.get_y() > 240:
+        pdf.add_page()
+        pdf.ln(10)
+    else:
+        pdf.ln(20)
+        
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(0, 10, '________________________', ln=True, align='C')
     pdf.cell(0, 5, 'Firma y Sello (Administrador)', ln=True, align='C')
