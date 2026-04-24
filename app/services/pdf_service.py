@@ -39,7 +39,11 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     pdf.cell(60, 8, f' {proyecto.fecha}', border=1)
     
     costo_dir_temp = sum(mo.total for mo in getattr(proyecto, 'mano_de_obra', [])) + sum(mat.total for mat in getattr(proyecto, 'materiales', []))
-    subtotal_sin_igv = costo_dir_temp * 1.15
+    util_porc_val = getattr(proyecto, 'utilidad_porcentaje', 10.0) or 10.0
+    utilidad_porc = util_porc_val / 100.0 if util_porc_val > 1 else util_porc_val
+    otros_porc_val = getattr(proyecto, 'otros_porcentaje', 5.0) or 5.0
+    otros_porc = otros_porc_val / 100.0 if otros_porc_val > 1 else otros_porc_val
+    subtotal_sin_igv = costo_dir_temp * (1 + utilidad_porc + otros_porc)
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(40, 8, 'Costo / Prto:', border=1)
     pdf.set_font('Arial', '', 10)
