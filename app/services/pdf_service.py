@@ -3,6 +3,18 @@ import tempfile
 import os
 from collections import defaultdict
 from app.services.chart_service import generar_curva_s
+from PIL import Image
+
+def get_proportional_dimensions(img_path, max_w, max_h):
+    try:
+        with Image.open(img_path) as img:
+            orig_w, orig_h = img.size
+            if orig_w == 0 or orig_h == 0:
+                return max_w, 0
+            ratio = min(max_w / orig_w, max_h / orig_h)
+            return orig_w * ratio, orig_h * ratio
+    except Exception:
+        return max_w, 0
 
 def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total_igv=0.0):
     pdf = FPDF()
@@ -170,7 +182,10 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
             for j, img_path in enumerate(pair):
                 x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
                 try:
-                    pdf.image(img_path, x=x_coord, y=row_y, w=IMG_W, h=0)  # h=0 = mantener proporción
+                    final_w, final_h = get_proportional_dimensions(img_path, IMG_W, IMG_H)
+                    offset_x = (IMG_W - final_w) / 2
+                    offset_y = (IMG_H - final_h) / 2
+                    pdf.image(img_path, x=x_coord + offset_x, y=row_y + offset_y, w=final_w, h=final_h)
                 except Exception as e:
                     # Si la imagen falla, colocar un placeholder de texto
                     pdf.set_xy(x_coord, row_y)
@@ -225,7 +240,10 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
             for j, img_path in enumerate(pair):
                 x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
                 try:
-                    pdf.image(img_path, x=x_coord, y=row_y, w=IMG_W, h=0)
+                    final_w, final_h = get_proportional_dimensions(img_path, IMG_W, IMG_H)
+                    offset_x = (IMG_W - final_w) / 2
+                    offset_y = (IMG_H - final_h) / 2
+                    pdf.image(img_path, x=x_coord + offset_x, y=row_y + offset_y, w=final_w, h=final_h)
                 except Exception as e:
                     pdf.set_xy(x_coord, row_y)
                     pdf.set_text_color(200, 0, 0)
@@ -842,7 +860,10 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
                             for j, img_p in enumerate(pair):
                                 x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
                                 try:
-                                    pdf.image(img_p, x=x_coord, y=row_y, w=IMG_W, h=0)
+                                    final_w, final_h = get_proportional_dimensions(img_p, IMG_W, IMG_H)
+                                    offset_x = (IMG_W - final_w) / 2
+                                    offset_y = (IMG_H - final_h) / 2
+                                    pdf.image(img_p, x=x_coord + offset_x, y=row_y + offset_y, w=final_w, h=final_h)
                                 except Exception as e:
                                     pdf.set_xy(x_coord, row_y)
                                     pdf.set_text_color(200, 0, 0)
@@ -874,7 +895,10 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
                             for j, fac_p in enumerate(pair):
                                 x_coord = MARGIN_LEFT + j * (IMG_W + COL_GAP)
                                 try:
-                                    pdf.image(fac_p, x=x_coord, y=row_y, w=IMG_W, h=0)
+                                    final_w, final_h = get_proportional_dimensions(fac_p, IMG_W, IMG_H)
+                                    offset_x = (IMG_W - final_w) / 2
+                                    offset_y = (IMG_H - final_h) / 2
+                                    pdf.image(fac_p, x=x_coord + offset_x, y=row_y + offset_y, w=final_w, h=final_h)
                                 except Exception as e:
                                     pdf.set_xy(x_coord, row_y)
                                     pdf.set_text_color(200, 0, 0)
@@ -921,13 +945,10 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
                 
                 start_y = pdf.get_y()
                 try:
-                    # Intentar centrar la imagen
-                    pdf.image(img_p, x=25, w=160, h=0)
-                    new_y = pdf.get_y()
-                    # Si la imagen es pequeña h=0 no actualiza y bien, fpdf a veces es raro
-                    # Forzamos un salto razonable basado en el ancho usado si y no se movió mucho
-                    if new_y - start_y < 10:
-                         pdf.set_y(start_y + 110)
+                    final_w, final_h = get_proportional_dimensions(img_p, 160, 100)
+                    offset_x = (160 - final_w) / 2
+                    pdf.image(img_p, x=25 + offset_x, y=start_y, w=final_w, h=final_h)
+                    pdf.set_y(start_y + final_h + 5)
                 except Exception as e:
                     pdf.set_text_color(200, 0, 0)
                     pdf.multi_cell(0, 6, f"(Error cargando imagen de cierre: {str(e)[:60]})")
