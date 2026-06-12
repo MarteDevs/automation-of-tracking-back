@@ -553,7 +553,7 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
     for m in getattr(proyecto, 'materiales', []):
         cat = getattr(m, 'categoria', '') or 'Materiales'
         cat = cat.strip().upper()
-        if 'MATERIALES' in cat or cat == 'RRCITA':
+        if 'MATERIALES' in cat or cat == 'RRCITA' or cat in ['PETROLEO', 'GASOLINA', 'TOPICO', 'TÓPICO']:
             materiales_lista_vi.append(m)
 
     if materiales_lista_vi:
@@ -581,9 +581,14 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         precios_unicos = {}
         for m in materiales_lista_vi:
             if m.descripcion not in precios_unicos:
-                precios_unicos[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
+                cant = getattr(m, 'cantidad', 0) or 0.0
+                total_item = getattr(m, 'total', 0) or 0.0
+                if cant > 0:
+                    precios_unicos[m.descripcion] = total_item / cant
+                else:
+                    precios_unicos[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
 
-        total_ppto_mat_vi = sum((m.cantidad or 0) * (m.precio_unitario or 0) for m in materiales_lista_vi)
+        total_ppto_mat_vi = sum(getattr(m, 'total', 0) or 0.0 for m in materiales_lista_vi)
         total_gast_mat_vi = sum(precios_unicos.get(nom, 0) * cant for nom, cant in consumos_vi.items())
         saldo_global_vi = total_ppto_mat_vi - total_gast_mat_vi
         
@@ -1007,15 +1012,25 @@ def crear_pdf_balance_general(proyecto, texto_ia='', ppto_total_igv=0.0) -> str:
         for c in getattr(av, 'consumos', []):
             consumos_historicos[c.nombre_material] = consumos_historicos.get(c.nombre_material, 0.0) + c.cantidad_usada
 
-    materiales_lista = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
+    materiales_lista = []
+    for m in getattr(proyecto, 'materiales', []):
+        cat = getattr(m, 'categoria', '') or 'Materiales'
+        cat = cat.strip().upper()
+        if 'MATERIALES' in cat or cat == 'RRCITA' or cat in ['PETROLEO', 'GASOLINA', 'TOPICO', 'TÓPICO']:
+            materiales_lista.append(m)
 
     # Mapear precio unico por nombre (primer match) para calcular el gasto real sin duplicados
     precios_unicos = {}
     for m in materiales_lista:
         if m.descripcion not in precios_unicos:
-            precios_unicos[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
+            cant = getattr(m, 'cantidad', 0) or 0.0
+            total_item = getattr(m, 'total', 0) or 0.0
+            if cant > 0:
+                precios_unicos[m.descripcion] = total_item / cant
+            else:
+                precios_unicos[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
 
-    total_ppto = sum((m.cantidad or 0) * (m.precio_unitario or 0) for m in materiales_lista)
+    total_ppto = sum(getattr(m, 'total', 0) or 0.0 for m in materiales_lista)
     total_gast = sum(precios_unicos.get(nom, 0) * cant for nom, cant in consumos_historicos.items())
 
     saldo_global = total_ppto - total_gast

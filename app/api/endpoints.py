@@ -143,17 +143,47 @@ async def procesar_presupuesto(request: Request, file: UploadFile = File(...), d
             )
             db.add(nueva_mo)
 
-        # 5.3 Guardar registros de Materiales y Equipos (Costos Variables)
+        # 5.3 Agrupar y Guardar registros de Materiales y Equipos (Costos Variables)
+        materiales_agrupados = {}
         for mat in datos_validados.materiales_y_equipos:
+            desc_key = mat.descripcion.strip() if mat.descripcion else ""
+            key = (
+                desc_key.upper(),
+                (mat.unidad or "").strip().upper(),
+                (mat.categoria or "Materiales").strip().upper(),
+                mat.dias or 1.0
+            )
+            if key not in materiales_agrupados:
+                materiales_agrupados[key] = {
+                    "categoria": mat.categoria or "Materiales",
+                    "descripcion": desc_key,
+                    "unidad": mat.unidad,
+                    "cantidad": 0.0,
+                    "precio_unitario": mat.precio_unitario or 0.0,
+                    "dias": mat.dias or 1.0,
+                    "total": 0.0
+                }
+            item = materiales_agrupados[key]
+            item["cantidad"] += mat.cantidad or 0.0
+            item["total"] += mat.total or 0.0
+
+        for key, item in materiales_agrupados.items():
+            dias_val = item["dias"] or 1.0
+            cant_val = item["cantidad"]
+            if cant_val > 0:
+                item["precio_unitario"] = item["total"] / (cant_val * dias_val)
+            else:
+                item["precio_unitario"] = 0.0
+
             nuevo_mat = models.MaterialEquipo(
                 proyecto_id=nuevo_proyecto.id,
-                categoria=mat.categoria,
-                descripcion=mat.descripcion,
-                cantidad=mat.cantidad,
-                unidad=mat.unidad,
-                precio_unitario=mat.precio_unitario,
-                dias=mat.dias,
-                total=mat.total
+                categoria=item["categoria"],
+                descripcion=item["descripcion"],
+                cantidad=item["cantidad"],
+                unidad=item["unidad"],
+                precio_unitario=item["precio_unitario"],
+                dias=item["dias"],
+                total=item["total"]
             )
             db.add(nuevo_mat)
 
@@ -237,7 +267,7 @@ async def descargar_reporte_pdf(request: Request, proyecto_id: int, avance_id: i
     for m in getattr(proyecto, 'materiales', []):
         cat = getattr(m, 'categoria', '') or 'Materiales'
         cat = cat.strip().upper()
-        if 'MATERIALES' in cat or cat == 'RRCITA':
+        if 'MATERIALES' in cat or cat == 'RRCITA' or cat in ['PETROLEO', 'GASOLINA', 'TOPICO', 'TÓPICO']:
             materiales_lista.append(m)
     consumos_acum = {}
     for av in getattr(proyecto, 'avances', []):
@@ -248,9 +278,14 @@ async def descargar_reporte_pdf(request: Request, proyecto_id: int, avance_id: i
     precio_por_nombre = {}
     for m in materiales_lista:
         if m.descripcion not in precio_por_nombre:
-            precio_por_nombre[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
+            cant = getattr(m, 'cantidad', 0) or 0.0
+            total_item = getattr(m, 'total', 0) or 0.0
+            if cant > 0:
+                precio_por_nombre[m.descripcion] = total_item / cant
+            else:
+                precio_por_nombre[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
 
-    total_ppto_mat = sum((m.cantidad or 0) * (m.precio_unitario or 0) for m in materiales_lista)
+    total_ppto_mat = sum(getattr(m, 'total', 0) or 0.0 for m in materiales_lista)
     total_gast = sum(precio_por_nombre.get(nombre, 0.0) * cant for nombre, cant in consumos_acum.items())
     saldo_global = total_ppto_mat - total_gast
 
@@ -347,7 +382,7 @@ async def descargar_balance_pdf(request: Request, proyecto_id: int, db: Session 
     for m in getattr(proyecto, 'materiales', []):
         cat = getattr(m, 'categoria', '') or 'Materiales'
         cat = cat.strip().upper()
-        if 'MATERIALES' in cat or cat == 'RRCITA':
+        if 'MATERIALES' in cat or cat == 'RRCITA' or cat in ['PETROLEO', 'GASOLINA', 'TOPICO', 'TÓPICO']:
             materiales_lista.append(m)
     consumos_acum = {}
     for av in getattr(proyecto, 'avances', []):
@@ -358,9 +393,14 @@ async def descargar_balance_pdf(request: Request, proyecto_id: int, db: Session 
     precio_por_nombre = {}
     for m in materiales_lista:
         if m.descripcion not in precio_por_nombre:
-            precio_por_nombre[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
+            cant = getattr(m, 'cantidad', 0) or 0.0
+            total_item = getattr(m, 'total', 0) or 0.0
+            if cant > 0:
+                precio_por_nombre[m.descripcion] = total_item / cant
+            else:
+                precio_por_nombre[m.descripcion] = getattr(m, 'precio_unitario', 0) or 0.0
 
-    total_ppto_mat = sum((m.cantidad or 0) * (m.precio_unitario or 0) for m in materiales_lista)
+    total_ppto_mat = sum(getattr(m, 'total', 0) or 0.0 for m in materiales_lista)
     total_gast = sum(precio_por_nombre.get(nombre, 0.0) * cant for nombre, cant in consumos_acum.items())
     saldo_global = total_ppto_mat - total_gast
 
