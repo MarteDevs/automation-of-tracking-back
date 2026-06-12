@@ -549,7 +549,12 @@ def crear_pdf_avance(proyecto, avance, texto_ai, texto_balance_ia='', ppto_total
         pdf.set_text_color(0, 0, 0) # Restaurar color
 
     # ------------------ ANEXO VI: RESUMEN ACUMULADO DE MATERIALES ---------------- #
-    materiales_lista_vi = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
+    materiales_lista_vi = []
+    for m in getattr(proyecto, 'materiales', []):
+        cat = getattr(m, 'categoria', '') or 'Materiales'
+        cat = cat.strip().upper()
+        if 'MATERIALES' in cat or cat == 'RRCITA':
+            materiales_lista_vi.append(m)
 
     if materiales_lista_vi:
         pdf.add_page()

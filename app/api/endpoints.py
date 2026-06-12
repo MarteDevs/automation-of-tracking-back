@@ -233,7 +233,12 @@ async def descargar_reporte_pdf(request: Request, proyecto_id: int, avance_id: i
         raise HTTPException(status_code=404, detail="Proyecto o Avance no encontrados")
 
     # --- Calcular totales financieros para el balance IA ---
-    materiales_lista = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
+    materiales_lista = []
+    for m in getattr(proyecto, 'materiales', []):
+        cat = getattr(m, 'categoria', '') or 'Materiales'
+        cat = cat.strip().upper()
+        if 'MATERIALES' in cat or cat == 'RRCITA':
+            materiales_lista.append(m)
     consumos_acum = {}
     for av in getattr(proyecto, 'avances', []):
         for c in getattr(av, 'consumos', []):
@@ -338,7 +343,12 @@ async def descargar_balance_pdf(request: Request, proyecto_id: int, db: Session 
     import re, asyncio
 
     # --- Calcular totales financieros (deduplicar materiales por nombre) ---
-    materiales_lista = [m for m in getattr(proyecto, 'materiales', []) if m.categoria and 'MATERIALES' in m.categoria.upper()]
+    materiales_lista = []
+    for m in getattr(proyecto, 'materiales', []):
+        cat = getattr(m, 'categoria', '') or 'Materiales'
+        cat = cat.strip().upper()
+        if 'MATERIALES' in cat or cat == 'RRCITA':
+            materiales_lista.append(m)
     consumos_acum = {}
     for av in getattr(proyecto, 'avances', []):
         for c in getattr(av, 'consumos', []):
